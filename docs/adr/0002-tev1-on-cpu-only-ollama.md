@@ -1,0 +1,3 @@
+# tev1 on CPU-only Ollama
+
+The tev1 classifier model runs on a separate CPU-only Ollama instance (port 11433) instead of the GPU-backed instance (port 11434). This frees ~1.3GB of VRAM for qwen3.8:27b, which takes all available GPU memory. The trade-off is classification speed: 1.8s per request on CPU vs 0.3s on GPU. CPU-only is enforced via environment variables (OLLAMA_LLM_LIBRARY=cpu, CUDA_VISIBLE_DEVICES=-1) on a dedicated Ollama process, since Ollama's Modelfile cannot force CPU-only execution. GPU was rejected because qwen3.8:27b saturates VRAM and would cause layer offloading to CPU, degrading the main model's performance.

@@ -1,0 +1,3 @@
+# Sequential exhaustion over load balancing
+
+OllaSurf uses one provider until its cap is exhausted before switching to the next provider in the priority tier, rather than distributing requests across providers to balance load. This minimizes warm-up costs (especially when falling to local Ollama, where model loading takes seconds) and maximizes use of each provider's free tier. The trade-off is that a single provider's cap is consumed faster, and if that provider degrades mid-run, the switch happens at exhaustion (97% threshold) rather than proactively. Load balancing was rejected because it would cause repeated warm-ups and waste free capacity on providers that might never reach their cap.
