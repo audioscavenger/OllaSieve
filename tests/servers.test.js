@@ -1,4 +1,4 @@
-// tests/servers.test.js — Server startup and health endpoint tests.
+// tests/servers.test.js - Server startup and health endpoint tests.
 const { test, describe, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('http');

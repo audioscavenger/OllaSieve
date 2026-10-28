@@ -1,4 +1,4 @@
-// tests/config.test.js — Config loading and validation tests.
+// tests/config.test.js - Config loading and validation tests.
 const { test, describe, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');

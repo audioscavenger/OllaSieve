@@ -1,4 +1,4 @@
-// src/config.js — Configuration loading and validation for OllaSieve.
+// src/config.js - Configuration loading and validation for OllaSieve.
 //
 // Loads ollasieve.config.json from the working directory (or a path given
 // via OLLASIEVE_CONFIG env var), applies env-var overrides for secrets
@@ -90,6 +90,10 @@ function loadConfig(configPath) {
     config.storage.dbPath = path.resolve(configDir, config.storage.dbPath);
   }
 
+  // Resolve secret env var references in provider entries.
+  // Secrets are referenced by env var name (apiKeyEnv), never stored in config.
+  resolveSecrets(config);
+
   return config;
 }
 
@@ -112,4 +116,19 @@ function resolveEnv(name) {
   return process.env[name] || null;
 }
 
-module.exports = { loadConfig, validate, DEFAULT_CONFIG, resolveEnv, deepMerge };
+// Walk provider entries in all tiers and resolve apiKeyEnv references.
+// Stores resolved values in a parallel _secrets map (not in config, so
+// secrets are never serialized back to the config file).
+function resolveSecrets(config) {
+  if (!config.surf || !Array.isArray(config.surf.tiers)) return;
+  for (const tier of config.surf.tiers) {
+    if (!Array.isArray(tier.providers)) continue;
+    for (const provider of tier.providers) {
+      if (provider.apiKeyEnv) {
+        provider._resolvedApiKey = resolveEnv(provider.apiKeyEnv);
+      }
+    }
+  }
+}
+
+module.exports = { loadConfig, validate, DEFAULT_CONFIG, resolveEnv, resolveSecrets, deepMerge };

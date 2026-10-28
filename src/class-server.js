@@ -1,4 +1,4 @@
-// src/class-server.js — OllaClass Express app factory.
+// src/class-server.js - OllaClass Express app factory.
 //
 // Creates an Express application for the OllaClass classifier server.
 // Registers a health endpoint and a placeholder for /v1/systemone.

@@ -1,4 +1,4 @@
-// tests/db.test.js — SQLite setup tests.
+// tests/db.test.js - SQLite setup tests.
 const { test, describe, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');

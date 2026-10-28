@@ -1,4 +1,4 @@
-// src/surf-server.js — OllaSurf Express app factory.
+// src/surf-server.js - OllaSurf Express app factory.
 //
 // Creates an Express application for the OllaSurf proxy server.
 // Registers a health endpoint and a placeholder for the dashboard.
@@ -22,8 +22,12 @@ function createSurfApp(config, ledger) {
 
   // Plugin status endpoint
   app.get('/api/plugins', (req, res) => {
-    // Populated by plugin registry; placeholder
-    res.json({ plugins: {} });
+    const registry = app.locals.registry;
+    if (registry) {
+      res.json({ plugins: registry.status() });
+    } else {
+      res.json({ plugins: {} });
+    }
   });
 
   return app;

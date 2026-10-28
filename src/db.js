@@ -1,4 +1,4 @@
-// src/db.js — SQLite setup for OllaSieve.
+// src/db.js - SQLite setup for OllaSieve.
 //
 // Opens (or creates) the database at the configured path, enables WAL
 // mode for concurrent reads, and creates the schema tables if they

@@ -1,4 +1,4 @@
-// OllaSieve — Agent proxy with optional provider dashboard and classifier proxy.
+// OllaSieve - Agent proxy with optional provider dashboard and classifier proxy.
 //
 // Entry point: loads config, opens SQLite, creates plugin registry,
 // starts OllaSurf (:11400) and OllaClass (:11401) servers.
@@ -26,15 +26,17 @@ async function main() {
     ? createClassApp(config, db)
     : null;
 
-  // Load plugins into their respective apps
-  if (surfApp) {
-    await registry.load(config, (name) => {
-      // Route plugins to the correct app
-      if (name === 'ollasurf') return surfApp;
-      if (name === 'ollaclass') return classApp || surfApp;
-      return surfApp;
-    }, db);
-  }
+  // Load plugins into their respective apps.
+  // Route each plugin to the correct app; skip if the app doesn't exist.
+  await registry.load(config, (name) => {
+    if (name === 'ollasurf') return surfApp;
+    if (name === 'ollaclass') return classApp;
+    return surfApp || classApp;
+  }, db);
+
+  // Expose registry status on both apps
+  if (surfApp) surfApp.locals.registry = registry;
+  if (classApp) classApp.locals.registry = registry;
 
   // All plugins are loaded into their respective apps via the registry above.
   // ollaclass plugin is routed to classApp by the appFactory.

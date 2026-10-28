@@ -1,4 +1,4 @@
-// src/plugin-registry.js — Plugin loading and lifecycle management.
+// src/plugin-registry.js - Plugin loading and lifecycle management.
 //
 // Each plugin exports { name, version, init(app, config, ledger) }.
 // The registry loads plugins from the config's plugins array, calls
@@ -32,11 +32,22 @@ class PluginRegistry {
         }
 
         const pluginModule = require(pluginPath);
+        const pluginName = pluginModule.name || def.name;
         const app = appFactory(def.name);
+        if (!app) {
+          this.plugins.set(def.name, {
+            name: pluginName,
+            version: pluginModule.version || '0.1.0',
+            instance: pluginModule,
+            status: 'skipped',
+            error: 'Target app not available (server disabled)',
+          });
+          continue;
+        }
         await pluginModule.init(app, config, ledger);
 
         this.plugins.set(def.name, {
-          name: def.name,
+          name: pluginName,
           version: pluginModule.version || '0.1.0',
           instance: pluginModule,
           status: 'running',

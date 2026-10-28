@@ -1,4 +1,4 @@
-# OllaSieve v1 — Core Implementation
+# OllaSieve v1 - Core Implementation
 
 Status: ready-for-agent
 
@@ -8,7 +8,7 @@ OpenCode and OpenChamber expose many free-tier providers (OpenCode, OpenRouter, 
 
 ## Solution
 
-Build OllaSieve as a headless Node.js proxy with two optional servers (OllaSurf on :11400, OllaClass on :11401), a shared SQLite cap ledger, an embedded web dashboard, and a plugin registry. OllaSurf becomes the sole provider in OpenChamber — OpenCode talks only to OllaSurf, which routes to the real providers based on cap headroom and priority tiers. OllaClass wraps a local tev1 decision model into an OpenChamber-compatible `/v1/systemone` classifier endpoint. Both servers are optional and independently activatable via config.
+Build OllaSieve as a headless Node.js proxy with two optional servers (OllaSurf on :11400, OllaClass on :11401), a shared SQLite cap ledger, an embedded web dashboard, and a plugin registry. OllaSurf becomes the sole provider in OpenChamber - OpenCode talks only to OllaSurf, which routes to the real providers based on cap headroom and priority tiers. OllaClass wraps a local tev1 decision model into an OpenChamber-compatible `/v1/systemone` classifier endpoint. Both servers are optional and independently activatable via config.
 
 ## User Stories
 
@@ -48,12 +48,12 @@ Build OllaSieve as a headless Node.js proxy with two optional servers (OllaSurf 
 - Virtual models: `ollasurf/auto`, `ollasurf/trivial`, `ollasurf/research`, `ollasurf/implement`, `ollasurf/hard`. Each resolves to a tier + best available provider/model.
 - `ollasurf/auto`: calls OllaClass internally for classification, then resolves to tier. `ollasurf/<category>`: resolves directly to the free tier (or configured tier).
 - Provider tiers: `free` (OpenCode, OpenRouter, Gemini, etc.), `paid` (OpenRouter with dollar cap), `local` (Ollama). Each tier is a list of providers in priority order.
-- Cap definition per provider: `{ unit, limit, window }` where unit is `requests`/`tokens`/`dollars`/`premium_requests`, limit is a number, window is `day`/`week`/`month`. A provider can have multiple caps (exhaust when ANY is hit — most restrictive wins).
+- Cap definition per provider: `{ unit, limit, window }` where unit is `requests`/`tokens`/`dollars`/`premium_requests`, limit is a number, window is `day`/`week`/`month`. A provider can have multiple caps (exhaust when ANY is hit - most restrictive wins).
 - Cap tracking: parse `usage` from every response (real-time). Background poll provider APIs every 5 minutes (catches usage from other clients). On-demand refresh from dashboard.
 - Automated switching: when any cap reaches 97% (configurable per provider), mark provider as `exhausted` (cooldown until reset_at). Retry current request on next provider in priority order (one attempt, 3s cooldown). If that fails, return error to client.
 - Reactive recovery: on 429 from upstream, mark provider exhausted, retry current request on next provider (one attempt). Mirrors ollama-warden's retry pattern.
 - Model matching on switch: prefer same model family → capability match (context window, vision, tools) → any available. Configurable per provider.
-- Session affinity: natural — stay on current provider until exhausted. No per-request routing. Avoids warm-up costs.
+- Session affinity: natural - stay on current provider until exhausted. No per-request routing. Avoids warm-up costs.
 - Ollama warm-up: first request triggers model load. Dashboard shows "warming up" status. No pre-warming.
 
 ### Cap Ledger (SQLite, WAL mode)
@@ -172,14 +172,14 @@ Configurable per category in the local tier:
 ### Testing Strategy
 
 - **HTTP API seam (primary)**: Tests exercise OllaSieve through its real HTTP server. Send `POST /v1/chat/completions` with virtual model names; assert response body, status, usage tracking. Providers mocked at the adapter level.
-- **Cap ledger seam (secondary)**: Direct tests of SQLite operations — usage recording, cap checking, provider state transitions, reset logic, mixed cap units.
+- **Cap ledger seam (secondary)**: Direct tests of SQLite operations - usage recording, cap checking, provider state transitions, reset logic, mixed cap units.
 - **Real Ollama integration tests**: End-to-end smoke tests against local Ollama on port 11434 using available models (e.g., `qwen2.5-coder:0.5b` or `qwen3.5:9b`). These verify the full flow with a real provider but are slower and require Ollama running.
 - **OllaClass tests**: Mock tev1 (HTTP mock returning canned classification responses). Test prompt wrapping, category mapping, confidence threshold, fallback behavior. Additionally, integration tests against real tev1 on port 11433 (CPU-only Ollama) to verify the full request/response cycle with actual tev1 output.
 - **Not tested**: Individual provider API formats, tev1's internal accuracy (external dependency), dashboard rendering (manual/visual), config parsing (JSON schema validation).
 
 ## Out of Scope
 
-- Windows tray widget (deferred to v2 — needs dashboard data model first).
+- Windows tray widget (deferred to v2 - needs dashboard data model first).
 - Token/auth for localhost (v1 is localhost-only, no auth).
 - Protocol conversion (OpenChamber/OpenCode handle this; OllaSieve is transparent).
 - Per-project cap configuration (caps are global, not per-project).
@@ -190,10 +190,10 @@ Configurable per category in the local tier:
 
 ## Further Notes
 
-- The user's existing ollama-warden project (E:/Gitea/ollama-warden) is a donor for stream-forwarding patterns, SSE usage extraction, JSONL trace, and retry logic. However, ollama-warden has no cap/quota tracking — that is built fresh in OllaSieve.
+- The user's existing ollama-warden project (E:/Gitea/ollama-warden) is a donor for stream-forwarding patterns, SSE usage extraction, JSONL trace, and retry logic. However, ollama-warden has no cap/quota tracking - that is built fresh in OllaSieve.
 - MuxLayer (external desktop app) is a reference for routing concepts (route profiles, failover, session affinity, capability matrix) but is NOT being redeveloped. OllaSieve is headless, plugin-based, and cap-monitoring-focused.
 - tev1 runs on a CPU-only Ollama instance (port 11433) to avoid VRAM contention with GPU models on port 11434. ~1.8s per request, ~1.3GB RAM. CPU-only enforced via `OLLAMA_LLM_LIBRARY=cpu` and `CUDA_VISIBLE_DEVICES=-1`.
-- tev1 supports both `choice` (multi-option with probabilities) and `noul` (yes/no) question types in a single `/v1/systemone` call. Confirmed by direct testing — Gemini v2 incorrectly claimed tev1 was binary-only.
+- tev1 supports both `choice` (multi-option with probabilities) and `noul` (yes/no) question types in a single `/v1/systemone` call. Confirmed by direct testing - Gemini v2 incorrectly claimed tev1 was binary-only.
 - tev1 must be "saved" in the Ollama session before the `/v1/systemone` endpoint responds. OllaClass should handle this with a warm-up request on startup.
 - nimble (Apache 2.0, 9GB) is an alternative classifier model but tev1 is the chosen model due to smaller size and acceptable speed.
 - The user has paid $10 to OpenRouter to raise the daily free cap. The paid tier's dollar cap is user-configurable from the dashboard.
