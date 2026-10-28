@@ -4,11 +4,11 @@
 
 **Blocked by:** 04 (OllaSurf core proxy), 06 (OllaClass classifier)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `ollasurf/auto` request → OllaSurf calls OllaClass → gets category → routes to correct tier
-- [ ] Category-to-tier mapping: trivial/research → free tier, implement → free tier (or configured), hard → free or paid tier based on config
-- [ ] OllaClass warm-up triggered on OllaSurf startup (fire-and-forget, retry on failure)
-- [ ] If OllaClass unavailable: fall back to default category (configurable, default `implement`)
-- [ ] OllaClass low_confidence flag propagated to dashboard/request log
-- [ ] End-to-end test: `ollasurf/auto` request with mocked OllaClass → correct tier selected → response returned
+- [x] `ollasurf/auto` request → OllaSurf calls OllaClass → gets category → routes to correct tier
+- [x] Category-to-tier mapping: trivial/research → free tier, implement → free tier (or configured), hard → free or paid tier based on config
+- [x] OllaClass warm-up triggered on OllaSurf startup (fire-and-forget, retry on failure)
+- [x] If OllaClass unavailable: fall back to default category (configurable, default `implement`)
+- [x] OllaClass low_confidence flag propagated to dashboard/request log
+- [x] End-to-end test: `ollasurf/auto` request with mocked OllaClass → correct tier selected → response returned

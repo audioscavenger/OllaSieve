@@ -4,13 +4,13 @@
 
 **Blocked by:** 02 (Provider client adapter), 03 (Cap ledger)
 
-**Status:** in-progress
+**Status:** done
 
-- [ ] `POST /v1/chat/completions` accepts virtual model names and returns provider response
-- [ ] Model resolution: virtual model → tier → first available (non-exhausted) provider in priority order
-- [ ] Request forwarded via adapter with correct URL, headers, body
-- [ ] Usage parsed from response and recorded in ledger
-- [ ] Provider state checked before routing (skip exhausted providers)
-- [ ] Response returned to client with original status code and body
-- [ ] `GET /v1/models` lists virtual models
-- [ ] Integration test: send request with `ollasurf/trivial`, verify response + ledger entry
+- [x] `POST /v1/chat/completions` accepts virtual model names and returns provider response
+- [x] Model resolution: virtual model → tier → first available (non-exhausted) provider in priority order
+- [x] Request forwarded via adapter with correct URL, headers, body
+- [x] Usage parsed from response and recorded in ledger
+- [x] Provider state checked before routing (skip exhausted providers)
+- [x] Response returned to client with original status code and body
+- [x] `GET /v1/models` lists virtual models
+- [x] Integration test: send request with `ollasurf/trivial`, verify response + ledger entry

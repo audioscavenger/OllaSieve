@@ -4,14 +4,14 @@
 
 **Blocked by:** 01 (Project scaffolding & plugin registry)
 
-**Status:** in-progress
+**Status:** done
 
-- [ ] `POST /v1/systemone` accepts `{ prompt, action? }` and returns normalized classification
-- [ ] Jev-style wrapping: builds correct payload with state + questions (4 criteria + is_clear)
-- [ ] tev1 call: POST to `http://127.0.0.1:11433/v1/systemone` with wrapped payload
-- [ ] Response parsing: extract choice, probabilities, confidence, noul, usage
-- [ ] Category mapping: hard_reasoning → hard
-- [ ] Confidence gating: threshold 0.6, is_clear threshold 0.5, fallback category on low confidence
-- [ ] Warm-up: send test request on startup; retry once on first-request failure
-- [ ] Mock tev1 tests: canned responses, prompt wrapping verification, confidence threshold, fallback
-- [ ] Real tev1 integration test: classify a sample prompt, verify category + confidence
+- [x] `POST /v1/systemone` accepts `{ prompt, action? }` and returns normalized classification
+- [x] Jev-style wrapping: builds correct payload with state + questions (4 criteria + is_clear)
+- [x] tev1 call: POST to `http://127.0.0.1:11433/v1/systemone` with wrapped payload
+- [x] Response parsing: extract choice, probabilities, confidence, noul, usage
+- [x] Category mapping: hard_reasoning → hard
+- [x] Confidence gating: threshold 0.6, is_clear threshold 0.5, fallback category on low confidence
+- [x] Warm-up: send test request on startup; retry once on first-request failure
+- [x] Mock tev1 tests: canned responses, prompt wrapping verification, confidence threshold, fallback
+- [x] Real tev1 integration test: classify a sample prompt, verify category + confidence
