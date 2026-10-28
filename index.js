@@ -21,10 +21,10 @@ async function main() {
 
   // Create Express apps
   const surfApp = config.surf && config.surf.enabled
-    ? createSurfApp(config, db)
+    ? createSurfApp(config, db, adapter)
     : null;
   const classApp = config.class && config.class.enabled
-    ? createClassApp(config, db)
+    ? createClassApp(config, db, adapter)
     : null;
 
   // Inject provider adapter at startup (swappable for testing)

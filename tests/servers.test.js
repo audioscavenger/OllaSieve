@@ -27,7 +27,7 @@ describe('servers', () => {
   });
 
   test('OllaSurf health endpoint returns 200', async () => {
-    const app = createSurfApp(config, db);
+    const app = createSurfApp(config, db, null);
     surfServer = app.listen(0); // random port
     const port = surfServer.address().port;
 
@@ -39,7 +39,7 @@ describe('servers', () => {
   });
 
   test('OllaClass health endpoint returns 200', async () => {
-    const app = createClassApp(config, db);
+    const app = createClassApp(config, db, null);
     classServer = app.listen(0);
     const port = classServer.address().port;
 
@@ -51,7 +51,7 @@ describe('servers', () => {
   });
 
   test('OllaSurf dashboard placeholder returns HTML', async () => {
-    const app = createSurfApp(config, db);
+    const app = createSurfApp(config, db, null);
     const srv = app.listen(0);
     const port = srv.address().port;
 
@@ -63,7 +63,7 @@ describe('servers', () => {
   });
 
   test('OllaClass /v1/systemone returns 501 (not yet implemented)', async () => {
-    const app = createClassApp(config, db);
+    const app = createClassApp(config, db, null);
     const srv = app.listen(0);
     const port = srv.address().port;
 
