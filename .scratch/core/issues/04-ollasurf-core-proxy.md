@@ -4,7 +4,7 @@
 
 **Blocked by:** 02 (Provider client adapter), 03 (Cap ledger)
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 - [ ] `POST /v1/chat/completions` accepts virtual model names and returns provider response
 - [ ] Model resolution: virtual model → tier → first available (non-exhausted) provider in priority order
