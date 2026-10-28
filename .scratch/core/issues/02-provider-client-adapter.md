@@ -4,10 +4,10 @@
 
 **Blocked by:** 01 (Project scaffolding & plugin registry)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Adapter interface defined: `call(request) → { status, body, usage, latencyMs }`
-- [ ] Mock adapter supports configurable responses, usage data, status codes, and delays
-- [ ] Real adapter (fetch-based) calls a provider and returns parsed response + usage
-- [ ] Adapter injected at app startup, replaceable for testing
-- [ ] Usage parsing handles both OpenAI-compat (`usage.prompt_tokens`/`completion_tokens`) and Ollama native (`prompt_eval_count`/`eval_count`) shapes
+- [x] Adapter interface defined: `call(request) → { status, body, usage, latencyMs }`
+- [x] Mock adapter supports configurable responses, usage data, status codes, and delays
+- [x] Real adapter (fetch-based) calls a provider and returns parsed response + usage
+- [x] Adapter injected at app startup, replaceable for testing
+- [x] Usage parsing handles both OpenAI-compat (`usage.prompt_tokens`/`completion_tokens`) and Ollama native (`prompt_eval_count`/`eval_count`) shapes

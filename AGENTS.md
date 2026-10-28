@@ -13,3 +13,7 @@ The skills speak in terms of five canonical triage roles. See `docs/agents/triag
 ### Domain docs
 
 Single-context layout: one `GLOSSARY.md` and one `docs/adr/` at the repo root. See `docs/agents/domain.md` for consumer rules.
+
+### Dev ports
+
+OllaSieve runs OllaSurf on :11400 and OllaClass on :11401. To kill a specific instance, find its PID first (`netstat -ano | findstr :11400`) — never kill all node.exe (OpenChamber runs as node.exe).

@@ -5,10 +5,10 @@
 const name = 'ollaclass';
 const version = '0.1.0';
 
-async function init(app, config, ledger) {
+async function init(app, config, ledger, adapter) {
   // Placeholder: plugin loaded successfully.
   // Routes registered here in ticket #06.
-  app.locals.ollaclass = { initialized: true };
+  app.locals.ollaclass = { initialized: true, adapter };
 }
 
 module.exports = { name, version, init };

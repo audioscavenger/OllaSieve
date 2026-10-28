@@ -14,7 +14,8 @@ class PluginRegistry {
 
   // Load and initialize plugins from config.
   // pluginDir: base directory containing plugin subdirectories.
-  async load(config, appFactory, ledger) {
+  // adapter: optional provider client adapter; injected at startup, replaceable for testing.
+  async load(config, appFactory, ledger, adapter) {
     const pluginDefs = (config.plugins || []).filter((p) => p.enabled !== false);
 
     for (const def of pluginDefs) {
@@ -44,7 +45,7 @@ class PluginRegistry {
           });
           continue;
         }
-        await pluginModule.init(app, config, ledger);
+        await pluginModule.init(app, config, ledger, adapter);
 
         this.plugins.set(def.name, {
           name: pluginName,

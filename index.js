@@ -3,11 +3,12 @@
 // Entry point: loads config, opens SQLite, creates plugin registry,
 // starts OllaSurf (:11400) and OllaClass (:11401) servers.
 
-const { loadConfig } = require('./src/config');
+const { loadConfig, resolveEnv } = require('./src/config');
 const { openDatabase } = require('./src/db');
 const { PluginRegistry } = require('./src/plugin-registry');
 const { createSurfApp } = require('./src/surf-server');
 const { createClassApp } = require('./src/class-server');
+const { RealAdapter } = require('./src/adapter');
 
 async function main() {
   const config = loadConfig();
@@ -26,13 +27,16 @@ async function main() {
     ? createClassApp(config, db)
     : null;
 
+  // Inject provider adapter at startup (swappable for testing)
+  const adapter = new RealAdapter();
+
   // Load plugins into their respective apps.
   // Route each plugin to the correct app; skip if the app doesn't exist.
   await registry.load(config, (name) => {
     if (name === 'ollasurf') return surfApp;
     if (name === 'ollaclass') return classApp;
     return surfApp || classApp;
-  }, db);
+  }, db, adapter);
 
   // Expose registry status on both apps
   if (surfApp) surfApp.locals.registry = registry;
