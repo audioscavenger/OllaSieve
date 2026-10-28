@@ -4,7 +4,7 @@
 
 **Blocked by:** 04 (OllaSurf core proxy)
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 - [ ] Predictive: when cap usage >= 97%, mark provider exhausted, route next request to next provider
 - [ ] Reactive: on 429 from upstream, mark provider exhausted, retry current request on next provider (one attempt, 3s cooldown)

@@ -1,9 +1,9 @@
 // src/surf-server.js - OllaSurf Express app factory.
 //
 // Creates an Express application for the OllaSurf proxy server.
-// Registers health endpoint, /v1/chat/completions resolver, /v1/models virtual models,
-// plugin status endpoint, and dashboard placeholder.
-// OllaSurf plugin registers its routes via init().
+// Registers health endpoint, /v1/chat/completions resolver with automated switching,
+// /v1/models virtual models, plugin status endpoint, and dashboard placeholder.
+// Switching logic: predictive (97% cap threshold) and reactive (429 recovery).
 
 const express = require('express');
 
@@ -31,6 +31,15 @@ function createSurfApp(config, ledger) {
     }
   });
 
+  // Switch configuration
+  const switchConfig = {
+    predictiveThreshold: config.surf.switchThreshold || 0.97,
+    reactiveRecovery: config.surf.reactiveRecovery !== false,
+    reactiveRetries: config.surf.reactiveRetries || 1,
+    reactiveCooldownMs: config.surf.reactiveCooldownMs || 3000,
+    modelMatching: config.surf.modelMatching || 'family',
+  };
+
   // OllaSurf proxy endpoints
   // List virtual models
   app.get('/v1/models', (req, res) => {
@@ -44,59 +53,113 @@ function createSurfApp(config, ledger) {
     res.json({ object: 'list', data: virtualModels });
   });
 
-  // POST /v1/chat/completions
+  // POST /v1/chat/completions with automated provider switching
   app.post('/v1/chat/completions', async (req, res) => {
     try {
-      // Extract virtual model name from request body
       const { model: virtualModel } = req.body;
       if (!virtualModel) {
         return res.status(400).json({ error: 'Missing model in request body' });
       }
 
-      // Resolve virtual model to tier and provider
       const tier = resolveTier(virtualModel);
       if (!tier) {
         return res.status(400).json({ error: `Unknown virtual model: ${virtualModel}` });
       }
 
-      // Find first available provider in tier (excluding exhausted)
-      const provider = findFirstAvailableProvider(tier);
-      if (!provider) {
-        return res.status(503).json({ error: 'No available providers', providersExhausted: true });
+      // Try to find an available provider with switching fallback
+      const result = await executeWithSwitching(tier, req.body, virtualModel);
+
+      if (!result.success) {
+        return res.status(result.status || 503).json(result.error);
       }
 
-      // Prepare request for upstream provider
-      const request = {
-        method: 'POST',
-        url: provider.base_url + '/v1/chat/completions',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${provider.apiKeyEnv ? process.env[provider.apiKeyEnv] || '' : ''}`, // Use env var, not stored in config
-        },
-        body: req.body,
-      };
-
-      // Forward request via adapter
-      const { adapter } = app.locals.ollasurf;
-      const response = await adapter.call(request);
-
-      // Record usage in ledger
-      if (response.usage) {
-        ledger.recordUsage(provider.id, response.body.model, response.usage, response.status, response.latencyMs);
-      }
-
-      // Return response to client
-      return res.status(response.status).json(response.body);
+      return res.status(result.status).json(result.body);
     } catch (err) {
       console.error('OllaSurf proxy error:', err.message);
       return res.status(500).json({ error: 'Internal server error' });
     }
   });
 
+  // Try routing with automated switching across providers in tier
+  async function executeWithSwitching(tier, body, virtualModel) {
+    const providers = tier.providers || [];
+    if (providers.length === 0) {
+      return { success: false, status: 503, error: { error: 'No available providers', providersExhausted: true } };
+    }
+
+    let lastError;
+    let switchedFrom = null;
+
+    for (let attempt = 0; attempt < providers.length; attempt++) {
+      const provider = findFirstAvailableProvider(tier, switchedFrom);
+      if (!provider) {
+        break;
+      }
+
+      const request = {
+        method: 'POST',
+        url: provider.base_url + '/v1/chat/completions',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${provider.apiKeyEnv ? process.env[provider.apiKeyEnv] || '' : ''}`,
+        },
+        body,
+      };
+
+      const { adapter } = app.locals.ollasurf;
+      if (!adapter) {
+        return { success: false, status: 500, error: { error: 'Adapter not available' } };
+      }
+
+      try {
+        const response = await adapter.call(request);
+
+        // Record usage if response has usage data
+        if (response.usage) {
+          ledger.recordUsage(provider.id, response.body.model, response.usage, response.status, response.latencyMs, switchedFrom);
+        }
+
+        // Predictive: check if provider cap now >= threshold
+        if (response.status === 200 || response.status === 201) {
+          const capsCheck = ledger.checkCaps(provider.id, switchConfig.predictiveThreshold);
+          if (capsCheck.exceeded) {
+            markProviderExhausted(provider.id, capsCheck.cap, `predictive: ${capsCheck.reason}`);
+          }
+        }
+
+        return {
+          success: true,
+          status: response.status,
+          body: response.body,
+        };
+
+      } catch (err) {
+        lastError = err;
+
+        // Reactive 429 recovery: retry on next provider with cooldown
+        if (err.status === 429 || (err.message && err.message.includes('429'))) {
+          markProviderExhausted(provider.id, null, 'reactive: 429 rate limited');
+          switchedFrom = provider.id;
+          // Wait cooldown before next attempt
+          if (attempt < providers.length - 1 && switchConfig.reactiveCooldownMs > 0) {
+            await new Promise(r => setTimeout(r, switchConfig.reactiveCooldownMs));
+          }
+          continue;
+        }
+
+        // Non-429 error: try next provider
+        switchedFrom = provider.id;
+        continue;
+      }
+    }
+
+    return { success: false, status: 503, error: { error: 'All providers exhausted', lastError: lastError?.message } };
+  }
+
   // Helper functions
   function resolveTier(model) {
     const tiers = config.surf.tiers || [];
-    
+
     if (tiers.length > 0) {
       const tierMapping = {
         'ollasurf/auto': tiers.find(t => t.type === 'implement') || tiers[0],
@@ -107,25 +170,22 @@ function createSurfApp(config, ledger) {
       };
       return tierMapping[model];
     }
-    
-    // Return a minimal default tier when no tiers configured (for testing)
-    return {
-      providers: [],
-      resolve: () => null,
-    };
+
+    // Return a minimal default tier when no tiers configured
+    return { providers: [] };
   }
 
-  function findFirstAvailableProvider(tier) {
-    if (!tier || !tier.providers) return null;
+  function findFirstAvailableProvider(tier, excludeProviderId) {
+    const providers = tier.providers || [];
 
-    for (const provider of tier.providers) {
-      // Check provider state
+    for (const provider of providers) {
+      if (provider.id === excludeProviderId) continue;
+
       const state = ledger.getState(provider.id);
       if (state.status === 'exhausted' || state.status === 'cooldown') {
         continue;
       }
 
-      // Check caps exceeded
       const capsCheck = ledger.checkCaps(provider.id);
       if (capsCheck.exceeded) {
         continue;
@@ -135,6 +195,12 @@ function createSurfApp(config, ledger) {
     }
 
     return null;
+  }
+
+  function markProviderExhausted(providerId, cap, reason) {
+    const cooldownUntil = new Date(Date.now() + switchConfig.reactiveCooldownMs).toISOString();
+    ledger.setState(providerId, 'exhausted', cooldownUntil);
+    console.log(`OllaSurf: provider ${providerId} marked exhausted - ${reason}`);
   }
 
   return app;
