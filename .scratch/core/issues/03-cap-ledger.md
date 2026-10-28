@@ -4,12 +4,12 @@
 
 **Blocked by:** 01 (Project scaffolding & plugin registry)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] All 5 tables created with correct schema
-- [ ] Record usage event: insert into usage_events, update caps.current_usage, update daily_summary
-- [ ] Check caps: return whether any cap for a provider is exceeded (>= threshold), handling mixed units
-- [ ] Provider state transitions: healthy → exhausted (with cooldown_until), exhausted → healthy (on reset), cooldown countdown
-- [ ] Cap reset: when window expires, reset current_usage to 0 and update reset_at
-- [ ] Most-restrictive-wins: if a provider has multiple caps, exhaust when ANY is hit
-- [ ] Direct unit tests for all CRUD operations and state transitions
+- [x] All 5 tables created with correct schema
+- [x] Record usage event: insert into usage_events, update caps.current_usage, update daily_summary
+- [x] Check caps: return whether any cap for a provider is exceeded (>= threshold), handling mixed units
+- [x] Provider state transitions: healthy → exhausted (with cooldown_until), exhausted → healthy (on reset), cooldown countdown
+- [x] Cap reset: when window expires, reset current_usage to 0 and update reset_at
+- [x] Most-restrictive-wins: if a provider has multiple caps, exhaust when ANY is hit
+- [x] Direct unit tests for all CRUD operations and state transitions
