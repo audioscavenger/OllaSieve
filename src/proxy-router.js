@@ -15,7 +15,9 @@ function resolveTier(model, config) {
   const tier = tierMapping[model];
   if (tier) return tier;
   // Fallback: default tier list lookup for unmapped models
-  return tiers[0];
+  if (tiers[0]) return tiers[0];
+  // No tiers configured: return minimal default tier for testing
+  return { providers: [] };
 }
 
 function findFirstAvailableProvider(tier, ledger, excludeProviderId) {

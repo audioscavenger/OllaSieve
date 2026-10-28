@@ -1,0 +1,13 @@
+{
+  "providers": [
+    {
+      "id": "ollasurf",
+      "name": "OllaSurf (local proxy)",
+      "baseURL": "http://127.0.0.1:11400/v1",
+      "models": ["ollasurf/auto", "ollasurf/trivial", "ollasurf/research", "ollasurf/implement", "ollasurf/hard"],
+      "defaultModel": "ollasurf/auto",
+      "enabled": true
+    }
+  ],
+  "defaultProvider": "ollasurf"
+}

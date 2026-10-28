@@ -1,0 +1,6 @@
+{
+  "enabled": true,
+  "endpoint": "http://127.0.0.1:11401/v1/systemone",
+  "service": "OllaClass",
+  "fallback": "implement"
+}

@@ -14,5 +14,7 @@
 * Automated provider switching (97% predictive, 429 reactive, tier fallback)
 * OllaClass classifier with Jev-style tev1 wrapping
 * OllaSurf-OllaClass integration for ollasurf/auto routing
+* Real Ollama integration tests (skip gracefully if :11434 unreachable)
+* OpenCode integration config: opencode.jsonc, openchamber-providers.json, classifier-endpoint.json
 
 ## Released
