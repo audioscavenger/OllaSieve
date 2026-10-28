@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+* Moved the issue tracker from local markdown under `.scratch/` to Gitea issues managed with the `tea` CLI: `AGENTS.md` and `docs/agents/` now point at the Gitea tracker, with close reasons (`Reason: completed` / `Reason: not planned` / `Reason: wontfix`) recorded via `tea comments` before `tea issues close`.
+* Added the repo house style to `AGENTS.md`: no em dashes in prose; machine-wide file, encoding, and line-ending rules live in the global `~/.config/opencode/AGENTS.md`.
 * Config loading + env overrides + SQLite WAL + plugin registry
 * Two Express servers (OllaSurf :11400, OllaClass :11401) + health endpoints
 * Provider adapter interface with usage parsing (OpenAI + Ollama)
