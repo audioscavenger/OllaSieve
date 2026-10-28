@@ -2,24 +2,58 @@
 //
 // Entry point: loads config, opens SQLite, creates plugin registry,
 // starts OllaSurf (:11400) and OllaClass (:11401) servers.
+//
+// Architecture (single Node process, two optional Express servers):
+//   OpenCode / OpenChamber (client)
+//     -> OllaSurf :11400  (proxy + dashboard)
+//           -> resolveTier  -> proxy-router.js  (virtual model -> tier lookup)
+//           -> executeWithSwitching -> proxy-router.js (provider loop + switching)
+//                -> adapter (RealAdapter / MockAdapter)
+//     -> OllaClass :11401 (classifier)
+//           -> tev1 :11433  (Jev-style prompt wrapping + confidence gating)
+//   Shared: SQLite WAL ledger  (db.js schema / cap-ledger-{records,state}.js)
+//   Shared: provider adapter    (adapter.js: ProviderAdapter | MockAdapter | RealAdapter)
+//   Shared: plugin registry     (plugin-registry.js -> src/plugins/*/index.js)
+//
 
-const { loadConfig, resolveEnv } = require('./src/config');
+const { loadConfig } = require('./src/config');
 const { openDatabase } = require('./src/db');
 const { PluginRegistry } = require('./src/plugin-registry');
 const { createSurfApp } = require('./src/surf-server');
 const { createClassApp } = require('./src/class-server');
 const { RealAdapter } = require('./src/adapter');
 
+/**
+ * Bootstraps and starts the OllaSieve service.
+ *
+ * Dependency-injection order matters:
+ *   1. config  — load + validate configuration
+ *   2. db      — open SQLite (WAL) so cap-ledger can persist usage
+ *   3. adapter — create RealAdapter BEFORE apps reference it (bug fix:
+ *               previously `adapter` was referenced before `const`
+ *               declaration, causing Temporal Dead Zone error)
+ *   4. apps    — createSurfApp / createClassApp (each wires its own routes)
+ *   5. plugins — registry.load() calls each plugin's init(app, config, ledger, adapter)
+ *   6. listen  — bind HTTP servers to configured ports
+ *
+ * @returns {Promise<void>}
+ */
 async function main() {
   const config = loadConfig();
 
-  // Open SQLite database
+  // Open SQLite database (WAL mode) — used by cap-ledger for usage tracking
   const db = openDatabase(config.storage.dbPath);
 
-  // Plugin registry
+  // Inject provider adapter at startup (swappable for testing / MockAdapter).
+  // IMPORTANT: must be created before createSurfApp / createClassApp, which
+  // receive it as a dependency. Previously this was declared AFTER app
+  // creation, triggering a ReferenceError (temporal dead zone).
+  const adapter = new RealAdapter();
+
+  // Plugin registry — loads src/plugins/*/index.js and calls init()
   const registry = new PluginRegistry();
 
-  // Create Express apps
+  // Create Express apps (null when disabled by config flag)
   const surfApp = config.surf && config.surf.enabled
     ? createSurfApp(config, db, adapter)
     : null;
@@ -27,25 +61,22 @@ async function main() {
     ? createClassApp(config, db, adapter)
     : null;
 
-  // Inject provider adapter at startup (swappable for testing)
-  const adapter = new RealAdapter();
-
-  // Load plugins into their respective apps.
-  // Route each plugin to the correct app; skip if the app doesn't exist.
+  // Load plugins into their target apps.
+  // appFactory routes each plugin name to its Express app:
+  //   ollasurf  -> surfApp
+  //   ollaclass -> classApp
+  // Plugins skip gracefully if their app is null (disabled).
   await registry.load(config, (name) => {
     if (name === 'ollasurf') return surfApp;
     if (name === 'ollaclass') return classApp;
     return surfApp || classApp;
   }, db, adapter);
 
-  // Expose registry status on both apps
+  // Expose registry status on both apps (read by dashboard /api/plugins)
   if (surfApp) surfApp.locals.registry = registry;
   if (classApp) classApp.locals.registry = registry;
 
-  // All plugins are loaded into their respective apps via the registry above.
-  // ollaclass plugin is routed to classApp by the appFactory.
-
-  // Start servers
+  // Start HTTP servers
   const servers = [];
 
   if (surfApp) {
@@ -66,19 +97,15 @@ async function main() {
     console.log('OllaClass disabled (class.enabled = false)');
   }
 
-  // Graceful shutdown
-  process.on('SIGINT', () => {
+  // Graceful shutdown — close servers + db on INT/TERM
+  const shutdown = () => {
     console.log('\nShutting down...');
     servers.forEach((s) => s.close());
     db.close();
     process.exit(0);
-  });
-
-  process.on('SIGTERM', () => {
-    servers.forEach((s) => s.close());
-    db.close();
-    process.exit(0);
-  });
+  };
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
 }
 
 main().catch((err) => {

@@ -1,20 +1,38 @@
 // src/plugin-registry.js - Plugin loading and lifecycle management.
 //
-// Each plugin exports { name, version, init(app, config, ledger) }.
-// The registry loads plugins from the config's plugins array, calls
-// init() on each enabled plugin, and tracks their status.
+// Each plugin exports { name, version, init(app, config, ledger, adapter) }.
+//
+// The registry loads plugins from the config's plugins array, calls init() on each
+// enabled plugin, and tracks their status (running/not-found/error/skipped).
+//
+// Plugins live under src/plugins/<name>/index.js:
+//   - ollasurf/ → routes attached to OllaSurf (proxy endpoints)
+//   - ollaclass/ → routes attached to OllaClass (classifier endpoint)
+//
+// Status is exposed via app.locals.registry (read by /api/plugins endpoint).
 
 const fs = require('fs');
 const path = require('path');
 
+/**
+ * Manages plugin discovery, loading, and lifecycle.
+ * Plugins are loaded from src/plugins/<name>/index.js based on config.plugins[].
+ */
 class PluginRegistry {
   constructor() {
-    this.plugins = new Map(); // name -> { name, version, instance, status, error }
+    /** @type {Map<string, object>} name -> { name, version, instance, status, error } */
+    this.plugins = new Map();
   }
 
-  // Load and initialize plugins from config.
-  // pluginDir: base directory containing plugin subdirectories.
-  // adapter: optional provider client adapter; injected at startup, replaceable for testing.
+  /**
+   * Loads and initializes all enabled plugins from the config.
+   *
+   * @param {object} config - Config containing plugins array.
+   * @param {function(string): express.Application|null} appFactory - Maps plugin name to Express app (or null if disabled).
+   * @param {Database} ledger - SQLite instance passed to each plugin's init.
+   * @param {ProviderAdapter} adapter - Provider adapter passed to each plugin's init.
+   * @returns {Promise<void>}
+   */
   async load(config, appFactory, ledger, adapter) {
     const pluginDefs = (config.plugins || []).filter((p) => p.enabled !== false);
 
@@ -66,14 +84,28 @@ class PluginRegistry {
     }
   }
 
+  /**
+   * Gets plugin info by name.
+   * @param {string} name - Plugin name.
+   * @returns {object|null} Plugin info or null if not registered.
+   */
   get(name) {
     return this.plugins.get(name) || null;
   }
 
+  /**
+   * Lists all loaded plugins.
+   * @returns {Array<object>} Array of plugin info objects.
+   */
   list() {
     return Array.from(this.plugins.values());
   }
 
+  /**
+   * Returns a status map keyed by plugin name.
+   * Used by dashboard /api/plugins to show which plugins are active.
+   * @returns {object} { pluginName: { status, version, error } }
+   */
   status() {
     const result = {};
     for (const [name, info] of this.plugins) {

@@ -1,21 +1,43 @@
-// src/class-server.js - OllaClass Express app factory.
+// src/class-server.js — OllaClass Express app factory.
 //
 // Creates an Express application for the OllaClass classifier server.
-// Exposes POST /v1/systemone with Jev-style prompt wrapping to tev1 classifier.
-// Health endpoint at /health.
+// Exposes:
+//   GET /health           — health endpoint
+//   POST /v1/systemone    — Jev-style classifier proxy to tev1 (port 11433)
+//
+// Flow:
+//   1. Receive { prompt, action } from OllaSurf (ollasurf/auto)
+//   2. Build Jev-style payload: { state: { prompt, action }, questions: { intent_category, is_clear } }
+//   3. POST to tev1Endpoint (default http://127.0.0.1:11433/v1/systemone)
+//   4. Parse tev1 response: category, confidence, is_clear, probabilities
+//   5. Apply confidence gating (threshold 0.6, is_clear 0.5): below -> fallbackCategory
+//   6. Return normalized JSON to OllaSurf for tier routing
+//
+// tev1 runs CPU-only on Ollama (:11433). First request may fail (session quirk)
+// — retry once before giving up with 503.
 
 const express = require('express');
 
+/**
+ * Creates the OllaClass Express application.
+ *
+ * @param {object} config - Full config (server.classPort, class.* settings).
+ * @param {Database} ledger - SQLite instance (passed to plugin init).
+ * @returns {express.Application} Configured Express app.
+ */
 function createClassApp(config, ledger) {
   const app = express();
   app.use(express.json({ limit: '50mb' }));
 
-  // Health check
+  // Health endpoint — used by load balancers / startup scripts
   app.get('/health', (req, res) => {
     res.json({ status: 'ok', service: 'OllaClass', port: config.server.classPort });
   });
 
-  // Classifier placeholder (implemented below in /v1/systemone)
+  /**
+   * POST /v1/systemone — classify a prompt via tev1 and return category.
+   * Called by OllaSurf's classifyAndRoute() for ollasurf/auto routing.
+   */
   app.post('/v1/systemone', async (req, res) => {
     try {
       const { prompt, action } = req.body;
@@ -27,14 +49,16 @@ function createClassApp(config, ledger) {
       const adapter = ollaclass ? ollaclass.adapter : null;
       const tev1Endpoint = config.class.tev1Endpoint || 'http://127.0.0.1:11433/v1/systemone';
 
+      // If no adapter (no RealAdapter/MockAdapter injected) or OllaClass plugin not
+      // loaded yet, this endpoint is effectively unimplemented -> 501.
       if (!ollaclass || !adapter) {
         return res.status(501).json({ error: 'Classifier not yet implemented (ticket #06)' });
       }
 
-      // Build Jev-style payload
+      // Build Jev-style prompt-wrapping payload for tev1
       const payload = buildJevPayload(prompt, action);
 
-      // POST to tev1
+      // POST to tev1 endpoint
       const request = {
         method: 'POST',
         url: tev1Endpoint,
@@ -60,10 +84,10 @@ function createClassApp(config, ledger) {
         return res.status(response.status).json({ error: 'tev1 error', detail: response.body });
       }
 
-      // Parse tev1 response
+      // Parse tev1 response into normalized output
       const parsed = parseTev1Response(response.body);
 
-      // Confidence gating
+      // Confidence gating — low confidence or unclear request -> fallback tier
       const threshold = config.class.confidenceThreshold || 0.6;
       const isClearThreshold = 0.5;
 
@@ -93,75 +117,88 @@ function createClassApp(config, ledger) {
     }
   });
 
-  // Build Jev-style prompt wrapping payload
-  // tev1 expects: { state: { prompt, action }, questions: { intent_category: choice(...), is_clear: noul(...) } }
-  function buildJevPayload(prompt, action) {
-    return {
-      state: {
-        prompt,
-        action: action || 'implement',
-      },
-      questions: {
-        intent_category: {
-          type: 'choice',
-          options: ['trivial', 'research', 'implement', 'hard_reasoning'],
-          prompt: `Classify this request into one of: trivial, research, implement, hard_reasoning. Context: ${prompt}`,
-        },
-        is_clear: {
-          type: 'noul',
-          prompt: `Is this request clear enough to process? Context: ${prompt}`,
-        },
-      },
-    };
-  }
-
-  // Parse tev1 response into normalized output
-  function parseTev1Response(body) {
-    const result = {};
-
-    // Extract choice (intent_category selection)
-    if (body.choice !== undefined) {
-      result.category = body.choice;
-    } else if (body.choices && body.choices[0] && body.choices[0].choice !== undefined) {
-      result.category = body.choices[0].choice;
-    } else if (body.intent_category !== undefined) {
-      result.category = body.intent_category;
-    }
-
-    // Extract probabilities
-    if (body.probabilities !== undefined) {
-      result.probabilities = body.probabilities;
-    } else if (body.choices && body.choices[0] && body.choices[0].probabilities !== undefined) {
-      result.probabilities = body.choices[0].probabilities;
-    } else if (body.intent_category_probabilities !== undefined) {
-      result.probabilities = body.intent_category_probabilities;
-    }
-
-    // Extract confidence
-    if (body.confidence !== undefined) {
-      result.confidence = body.confidence;
-    } else if (body.choices && body.choices[0] && body.choices[0].confidence !== undefined) {
-      result.confidence = body.choices[0].confidence;
-    }
-
-    // Extract noul (is_clear) - yes/no
-    if (body.noul !== undefined) {
-      result.is_clear = body.noul;
-    } else if (body.is_clear !== undefined) {
-      result.is_clear = body.is_clear;
-    } else if (body.choices && body.choices[0] && body.choices[0].is_clear !== undefined) {
-      result.is_clear = body.choices[0].is_clear;
-    }
-
-    // Extract usage
-    if (body.usage !== undefined) {
-      result.usage = body.usage;
-    }
-
-    return result;
-  }
-
   return app;
+}
+
+/**
+ * Builds the Jev-style payload tev1 expects.
+ * Structure: { state: { prompt, action }, questions: { intent_category: choice(...), is_clear: noul(...) } }
+ *
+ * @param {string} prompt - User text to classify.
+ * @param {string} [action='implement'] - Action hint ('implement', 'research', etc.).
+ * @returns {object} Jev-compatible payload object.
+ */
+function buildJevPayload(prompt, action) {
+  return {
+    state: {
+      prompt,
+      action: action || 'implement',
+    },
+    questions: {
+      intent_category: {
+        type: 'choice',
+        options: ['trivial', 'research', 'implement', 'hard_reasoning'],
+        prompt: `Classify this request into one of: trivial, research, implement, hard_reasoning. Context: ${prompt}`,
+      },
+      is_clear: {
+        type: 'noul',
+        prompt: `Is this request clear enough to process? Context: ${prompt}`,
+      },
+    },
+  };
+}
+
+/**
+ * Parses a tev1 response body into normalized fields.
+ * Handles multiple tev1 response shapes (choice / choices[0].choice / intent_category,
+ * probabilities similarly, confidence similarly, noul/is_clear).
+ *
+ * @param {object} body - Raw tev1 response body.
+ * @returns {{category, confidence, is_clear, probabilities, usage: object|null}}
+ */
+function parseTev1Response(body) {
+  const result = {};
+
+  // Extract choice (intent_category selection)
+  if (body.choice !== undefined) {
+    result.category = body.choice;
+  } else if (body.choices && body.choices[0] && body.choices[0].choice !== undefined) {
+    result.category = body.choices[0].choice;
+  } else if (body.intent_category !== undefined) {
+    result.category = body.intent_category;
+  }
+
+  // Extract probabilities
+  if (body.probabilities !== undefined) {
+    result.probabilities = body.probabilities;
+  } else if (body.choices && body.choices[0] && body.choices[0].probabilities !== undefined) {
+    result.probabilities = body.choices[0].probabilities;
+  } else if (body.intent_category_probabilities !== undefined) {
+    result.probabilities = body.intent_category_probabilities;
+  }
+
+  // Extract confidence
+  if (body.confidence !== undefined) {
+    result.confidence = body.confidence;
+  } else if (body.choices && body.choices[0] && body.choices[0].confidence !== undefined) {
+    result.confidence = body.choices[0].confidence;
+  }
+
+  // Extract noul (is_clear) - yes/no
+  if (body.noul !== undefined) {
+    result.is_clear = body.noul;
+  } else if (body.is_clear !== undefined) {
+    result.is_clear = body.is_clear;
+  } else if (body.choices && body.choices[0] && body.choices[0].is_clear !== undefined) {
+    result.is_clear = body.choices[0].is_clear;
+  }
+
+  // Extract usage
+  if (body.usage !== undefined) {
+    result.usage = body.usage;
+  }
+
+  return result;
 }
 
 module.exports = { createClassApp };

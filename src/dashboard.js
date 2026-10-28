@@ -1,12 +1,29 @@
-// src/dashboard.js — Dashboard routes and JSON APIs for ticket #08.
+// src/dashboard.js — Dashboard routes and JSON APIs for OllaSurf (:11400).
+//
+// Mounts GET endpoints under /api/* serving:
+//   - /api/health            — service status
+//   - /api/providers         — per-tier provider list (used by dashboard progress bars)
+//   - /api/requests          — recent usage_events (last 50)
+//   - /api/plugins           — plugin registry status (running/skipped/error)
+//   - /api/purge?days=N      — delete usage_events older than N days
+//   - /dashboard             — HTML page that polls the JSON APIs (no SSR)
+//
+// All data originates from the shared cap-ledger (SQLite) and PluginRegistry.
 
 const express = require('express');
 
+/**
+ * Registers dashboard routes onto the OllaSurf Express app.
+ *
+ * @param {express.Application} app - OllaSurf Express app.
+ * @param {object} config - App config (surf.tiers for /api/providers).
+ * @param {CapLedger} ledger - Ledger instance (db + state + records).
+ */
 function registerDashboard(app, config, ledger) {
   app.get('/api/health', (req, res) => res.json({ status: 'ok', service: 'OllaSurf' }));
 
   app.get('/api/providers', (req, res) => {
-    const state = (provider) => ledger.getState(provider.id);
+    // Provider status fetched per tier by client; tiers list is used for progress bars
     res.json({ providers: config.surf.tiers || [] });
   });
 
@@ -23,6 +40,7 @@ function registerDashboard(app, config, ledger) {
   app.get('/api/purge', async (req, res) => {
     const { days } = req.query || {};
     const daysInt = parseInt(days, 10);
+    // Whitelist purge windows to prevent accidental data loss
     if (![7, 30, 90, 365].includes(daysInt)) {
       return res.status(400).json({ error: 'Invalid purge days. Use 7, 30, 90, or 365.' });
     }

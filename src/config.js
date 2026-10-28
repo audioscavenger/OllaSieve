@@ -4,10 +4,28 @@
 // via OLLASIEVE_CONFIG env var), applies env-var overrides for secrets
 // (secrets are referenced by env var *name* in the config, never stored
 // in the file), and validates required fields.
+//
+// Dependency graph:
+//   index.js -> loadConfig()  -> deepMerge(DEFAULT_CONFIG, raw)
+//   index.js -> resolveEnv()  -> process.env lookup for API keys
+//   config.surf.tiers[].providers[].apiKeyEnv -> _resolvedApiKey
+//
 
 const fs = require('fs');
 const path = require('path');
 
+/**
+ * Default configuration. A user's ollasieve.config.json is deep-merged into
+ * this (user values win). Fields:
+ * - server: host + ports (surf=11400, class=11401)
+ * - storage: dbPath, retentionDays, purgeOptions
+ * - plugins: array of { name, enabled } loaded by PluginRegistry
+ * - surf: switchThreshold, reactive settings, tiers (provider list)
+ * - class: tev1Endpoint, categories, confidenceThreshold
+ * - dashboard: path, requestLogSize
+ *
+ * @constant {object}
+ */
 const DEFAULT_CONFIG = {
   version: 1,
   server: {
@@ -50,6 +68,13 @@ const DEFAULT_CONFIG = {
   },
 };
 
+/**
+ * Validates a config object's structural integrity.
+ * Checks version, server section, and plugins array.
+ *
+ * @param {object} config - Config object to validate.
+ * @returns {string[]} Array of validation error messages (empty if valid).
+ */
 function validate(config) {
   const errors = [];
   if (!config || typeof config !== 'object') {
@@ -66,6 +91,21 @@ function validate(config) {
   return errors;
 }
 
+/**
+ * Loads + validates configuration.
+ *
+ * Search order for the config file:
+ *   1. Explicit path argument (if provided)
+ *   2. OLLASIEVE_CONFIG env var
+ *   3. ./ollasieve.config.json in cwd
+ *
+ * If the file is missing, DEFAULT_CONFIG is used. Secret env-var references
+ * (provider.apiKeyEnv) are resolved into provider._resolvedApiKey.
+ *
+ * @param {string} [configPath] - Optional explicit path to config file.
+ * @returns {object} Resolved + validated configuration object.
+ * @throws {Error} If validation fails.
+ */
 function loadConfig(configPath) {
   const resolvedPath = configPath || process.env.OLLASIEVE_CONFIG || path.join(process.cwd(), 'ollasieve.config.json');
 
@@ -75,10 +115,10 @@ function loadConfig(configPath) {
     raw = JSON.parse(text);
   }
 
-  // Deep merge with defaults
+  // Deep merge with defaults (copy defaults so we don't mutate the singleton)
   const config = deepMerge(JSON.parse(JSON.stringify(DEFAULT_CONFIG)), raw);
 
-  // Validate
+  // Validate against the schema
   const errors = validate(config);
   if (errors.length > 0) {
     throw new Error('Config validation failed: ' + errors.join('; '));
@@ -90,13 +130,20 @@ function loadConfig(configPath) {
     config.storage.dbPath = path.resolve(configDir, config.storage.dbPath);
   }
 
-  // Resolve secret env var references in provider entries.
-  // Secrets are referenced by env var name (apiKeyEnv), never stored in config.
+  // Resolve secret env var references in provider entries (apiKeyEnv -> _resolvedApiKey)
   resolveSecrets(config);
 
   return config;
 }
 
+/**
+ * Recursively deep-merges source into target (target mutated + returned).
+ * Arrays and primitives are replaced; plain objects are merged recursively.
+ *
+ * @param {object} target - Base object (mutated).
+ * @param {object} source - Overlay object.
+ * @returns {object} The merged target.
+ */
 function deepMerge(target, source) {
   if (!source || typeof source !== 'object') return target;
   for (const key of Object.keys(source)) {
@@ -110,15 +157,24 @@ function deepMerge(target, source) {
   return target;
 }
 
-// Resolve an env var reference: if a config field is an env var name string,
-// look it up in process.env. Used for apiKeyEnv fields.
+/**
+ * Resolves an env var by name. Used for apiKeyEnv fields where the config
+ * stores the *name* of the env var rather than the secret value itself.
+ *
+ * @param {string} name - Environment variable name.
+ * @returns {string|null} Resolved env value, or null if unset.
+ */
 function resolveEnv(name) {
   return process.env[name] || null;
 }
 
-// Walk provider entries in all tiers and resolve apiKeyEnv references.
-// Stores resolved values in a parallel _secrets map (not in config, so
-// secrets are never serialized back to the config file).
+/**
+ * Walks all provider entries in every tier and resolves apiKeyEnv references.
+ * The resolved value is stored at `provider._resolvedApiKey` (kept out of any
+ * config serialization — secrets are never persisted).
+ *
+ * @param {object} config - Configuration object (mutated in-place).
+ */
 function resolveSecrets(config) {
   if (!config.surf || !Array.isArray(config.surf.tiers)) return;
   for (const tier of config.surf.tiers) {

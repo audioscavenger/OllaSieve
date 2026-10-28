@@ -3,11 +3,29 @@
 // Opens (or creates) the database at the configured path, enables WAL
 // mode for concurrent reads, and creates the schema tables if they
 // don't exist. Returns the better-sqlite3 database instance.
+//
+// Schema (5 tables):
+//   providers      — provider registry (id, tier, type, base_url, api_key_env, priority)
+//   caps           — per-provider limits (unit: tokens|requests|dollars, limit_val, window, current_usage)
+//   usage_events   — per-request log (tokens_in/out, cost_usd, status, latency_ms, switched_from)
+//   provider_state — state machine (healthy|exhausted|cooldown, cooldown_until, consecutive_failures)
+//   daily_summary  — aggregated daily totals (requests, tokens_in/out, cost_usd)
+//
+// Foreign keys: caps.provider_id -> providers.id, usage_events.provider_id -> providers.id,
+//               provider_state.provider_id -> providers.id, daily_summary.provider_id -> providers.id
+//
+// WAL mode + foreign_keys = ON enable safe concurrent reads + referential integrity.
 
 const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
 
+/**
+ * Complete CREATE TABLE schema (executed as a single transaction via db.exec()).
+ * Tables are created IF NOT EXISTS so schema is idempotent across restarts.
+ *
+ * @constant {string}
+ */
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS providers (
   id TEXT PRIMARY KEY,
@@ -67,8 +85,18 @@ CREATE TABLE IF NOT EXISTS daily_summary (
 );
 `;
 
+/**
+ * Opens a SQLite database at the given path.
+ * - Ensures parent directory exists
+ * - Enables WAL mode (journal_mode = WAL) for concurrent readers
+ * - Enables foreign_keys = ON for referential integrity
+ * - Executes SCHEMA to create tables
+ *
+ * @param {string} dbPath - Absolute or relative path to the .db file.
+ * @returns {Database} better-sqlite3 Database instance ready for use.
+ */
 function openDatabase(dbPath) {
-  // Ensure parent directory exists
+  // Ensure parent directory exists (better-sqlite3 requires it)
   const dir = path.dirname(dbPath);
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
@@ -81,6 +109,11 @@ function openDatabase(dbPath) {
   return db;
 }
 
+/**
+ * Safely closes the database connection if open.
+ *
+ * @param {Database} db - better-sqlite3 Database instance.
+ */
 function closeDatabase(db) {
   if (db && db.open) {
     db.close();
