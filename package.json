@@ -1,15 +1,21 @@
 {
-  "name": "olla-sieve",
-  "version": "1.0.0",
-  "description": "Agent proxy between OpenChamber and OpenCode with optional provider dashboard and classifier proxy",
+  "name": "ollasieve",
+  "version": "0.1.0",
+  "description": "Agent proxy with optional provider dashboard and classifier proxy",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "test": "node --test \"tests/*.test.js\"",
+    "test:unit": "node --test \"tests/*.test.js\""
   },
-  "keywords": ["agent", "proxy", "dashboard", "classifier", "openchamber", "opcode"],
+  "keywords": ["agent", "proxy", "dashboard", "classifier", "openchamber", "opencode"],
   "author": "Eric Derewonko",
   "license": "MIT",
   "dependencies": {
+    "better-sqlite3": "^11.0.0",
     "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

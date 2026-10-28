@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "server": {
+    "host": "127.0.0.1",
+    "surfPort": 11400,
+    "classPort": 11401
+  },
+  "storage": {
+    "dbPath": "./data/ollasieve.db",
+    "retentionDays": null,
+    "purgeOptions": [7, 30, 90, 365]
+  },
+  "plugins": [
+    { "name": "ollasurf", "enabled": true },
+    { "name": "ollaclass", "enabled": true }
+  ],
+  "surf": {
+    "enabled": true,
+    "switchThreshold": 0.97,
+    "reactiveRecovery": true,
+    "reactiveRetries": 1,
+    "reactiveCooldownMs": 3000,
+    "modelMatching": "family",
+    "pollingIntervalMs": 300000,
+    "tiers": []
+  },
+  "class": {
+    "enabled": true,
+    "tev1Endpoint": "http://127.0.0.1:11433/v1/systemone",
+    "tev1Model": "tev1:0.8b",
+    "categories": ["trivial", "research", "implement", "hard_reasoning"],
+    "confidenceThreshold": 0.6,
+    "fallbackCategory": "implement",
+    "promptWrapping": "jev-style"
+  },
+  "dashboard": {
+    "enabled": true,
+    "path": "/dashboard",
+    "requestLogSize": 50
+  }
+}
