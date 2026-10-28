@@ -26,9 +26,9 @@ function registerDashboard(app, config, ledger) {
     if (![7, 30, 90, 365].includes(daysInt)) {
       return res.status(400).json({ error: 'Invalid purge days. Use 7, 30, 90, or 365.' });
     }
-    const stmt = ledger.db ? ledger.db.prepare('DELETE FROM usage_events WHERE ts <= datetime("now", '-' || ? || " days")') : null;
+    const stmt = ledger.db ? ledger.db.prepare("DELETE FROM usage_events WHERE ts <= datetime('now', '-' || ? || ' days')") : null;
     if (!stmt) return res.status(503).json({ error: 'Ledger unavailable' });
-    const result = stmt.run(`-${daysInt} days`);
+    const result = stmt.run(`${daysInt} days`);
     res.json({ deleted: result.changes, days: daysInt });
   });
 
