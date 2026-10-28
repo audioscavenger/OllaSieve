@@ -20,6 +20,16 @@ cd ollasieve
 npm install
 ```
 
+`better-sqlite3` builds a small native module during install (`prebuild-install`). npm 11 gates every third-party install script behind an approval list, so the approval is committed in this repo (the `allowScripts` field in `package.json`) and a plain `npm install` already builds the module.
+
+If npm reports that `better-sqlite3`'s install script was skipped (approval missing, or the version changed so it no longer matches), re-approve and let it build:
+```bash
+npm install-scripts approve better-sqlite3
+npm install
+```
+
+> This runs **after** `npm install`, not before — it operates on the installed package and writes the approval into `package.json`.
+
 ### Configuration
 Create `ollasieve.config.json` in project root:
 ```json
@@ -90,6 +100,44 @@ Visit `http://localhost:11400/dashboard` for:
 - Usage tracking (tokens_in/out, cost, latency)
 - Request log (last 50 events)
 - Plugin status
+
+> Note: the `/dashboard` HTML page is a v1 stub that currently renders only the plugin list; the JSON APIs above (`/api/providers`, `/api/requests`) are the working interfaces today.
+
+## Observability
+
+There is no log file — all diagnostic output goes to the terminal (stdout/stderr). The durable record is the SQLite ledger at `data/ollasieve.db`, exposed by OllaSurf on `:11400` via the JSON APIs below.
+
+### Capturing logs
+```bash
+# Live, terminal only
+npm start
+
+# Live, plus a durable copy on disk
+npm start 2>&1 | tee ollasieve.log
+```
+
+Every HTTP request is logged by a per-request middleware (`src/request-log.js`) as a single line, tagged with the service name. Successes (2xx/3xx) via `console.log`, client errors (4xx) via `console.warn`, server errors (5xx) via `console.error`. This covers `/health`, proxy endpoints, and dashboard routes, so hitting the endpoints from a client (OpenCode/OpenChamber, curl, etc.) always produces console output.
+
+### Observability checks (OllaSurf :11400)
+```bash
+# Liveness
+curl -s http://127.0.0.1:11400/health
+
+# Request ledger — last 50 usage_events (provider, model, tokens, cost, status, latency, switched_from)
+curl -s http://127.0.0.1:11400/api/requests
+
+# Configured tiers / providers
+curl -s http://127.0.0.1:11400/api/providers
+
+# Plugin load status (running / skipped / error)
+curl -s http://127.0.0.1:11400/api/plugins
+```
+
+These run against a live server (`npm start` in another terminal). Until a request has flowed through, `/api/requests` returns an empty `events` array.
+
+### What is not exposed yet
+- Provider health — the `provider_state` table (`healthy` / `exhausted` / `cooldown`, `cooldown_until`, `consecutive_failures`, `last_error`) — is persisted to SQLite but has **no API endpoint**.
+- The `/dashboard` HTML page is a v1 stub: it currently renders only the plugin list, not provider status, usage, or the request log.
 
 ## OpenCode Integration
 

@@ -17,6 +17,7 @@
 // — retry once before giving up with 503.
 
 const express = require('express');
+const { createRequestLogger } = require('./request-log');
 
 /**
  * Creates the OllaClass Express application.
@@ -27,6 +28,8 @@ const express = require('express');
  */
 function createClassApp(config, ledger) {
   const app = express();
+  // One-line-per-request logging across all OllaClass routes (incl. /health, /v1/systemone)
+  app.use(createRequestLogger('OllaClass'));
   app.use(express.json({ limit: '50mb' }));
 
   // Health endpoint — used by load balancers / startup scripts

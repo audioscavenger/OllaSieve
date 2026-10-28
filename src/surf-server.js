@@ -15,6 +15,7 @@
 const express = require('express');
 const { resolveTier, executeWithSwitching } = require('./proxy-router');
 const { registerDashboard } = require('./dashboard');
+const { createRequestLogger } = require('./request-log');
 
 /**
  * Creates the OllaSurf Express application.
@@ -26,6 +27,8 @@ const { registerDashboard } = require('./dashboard');
  */
 function createSurfApp(config, ledger, adapter) {
   const app = express();
+  // One-line-per-request logging across all OllaSurf routes (incl. /health, proxy)
+  app.use(createRequestLogger('OllaSurf'));
   app.use(express.json({ limit: '50mb' }));
 
   // Health endpoint — used by load balancers / startup scripts

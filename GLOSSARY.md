@@ -59,3 +59,19 @@ _Avoid_: Module, extension, addon
 **Warm-up**:
 The process of loading an Ollama model into VRAM/RAM on first request. OllaSurf does not pre-warm; the first request to a local model triggers loading, and the dashboard shows "warming up" status.
 _Avoid_: Cold start, initialization, loading
+
+**Decision trace**:
+The ordered narrative of how a single request was handled: tier resolution, provider attempts, switches/fallbacks, and final outcome. Lives in the JSONL event log; the SQLite ledger holds the durable facts underneath it.
+_Avoid_: Audit trail, history, log narrative
+
+**Event**:
+A single observability record emitted into the log sink (for example `provider_attempt` or `request_summary`).
+_Avoid_: Log entry, record, fact
+
+**Log sink**:
+The destination and format of observability output: console lines for humans, JSON Lines file for machine-readable/persistent events.
+_Avoid_: Logger, handler, transport
+
+**Request ID**:
+The correlation identifier minted at the OllaSurf edge and propagated (via header) to OllaClass, used to tie provider-attempt and request-summary events to one logical request across servers.
+_Avoid_: Trace ID (reserved for future tracing integrations), correlation key
