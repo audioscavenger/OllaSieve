@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 (Project scaffolding & plugin registry)
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 - [ ] `POST /v1/systemone` accepts `{ prompt, action? }` and returns normalized classification
 - [ ] Jev-style wrapping: builds correct payload with state + questions (4 criteria + is_clear)
