@@ -61,24 +61,87 @@ function createSurfApp(config, ledger) {
         return res.status(400).json({ error: 'Missing model in request body' });
       }
 
-      const tier = resolveTier(virtualModel);
-      if (!tier) {
-        return res.status(400).json({ error: `Unknown virtual model: ${virtualModel}` });
+      let tier;
+      if (virtualModel === 'ollasurf/auto') {
+        // Auto-routing: call OllaClass to classify, then route to mapped tier
+        const result = await classifyAndRoute(virtualModel, req.body, res);
+        if (!result.success) {
+          return res.status(result.status || 503).json(result.error);
+        }
+        return res.status(result.status).json(result.body);
+      } else {
+        tier = resolveTier(virtualModel);
+        if (!tier) {
+          return res.status(400).json({ error: `Unknown virtual model: ${virtualModel}` });
+        }
+
+        const result = await executeWithSwitching(tier, req.body, virtualModel);
+        if (!result.success) {
+          return res.status(result.status || 503).json(result.error);
+        }
+        return res.status(result.status).json(result.body);
       }
-
-      // Try to find an available provider with switching fallback
-      const result = await executeWithSwitching(tier, req.body, virtualModel);
-
-      if (!result.success) {
-        return res.status(result.status || 503).json(result.error);
-      }
-
-      return res.status(result.status).json(result.body);
     } catch (err) {
       console.error('OllaSurf proxy error:', err.message);
       return res.status(500).json({ error: 'Internal server error' });
     }
   });
+
+  // Call OllaClass for auto-routing: ollasurf/auto -> OllaClass -> category -> tier
+  async function classifyAndRoute(virtualModel, body, res) {
+    const { adapter } = app.locals.ollasurf;
+    const ollaclassUrl = config.server.classPort
+      ? `http://127.0.0.1:${config.server.classPort}/v1/systemone`
+      : null;
+
+    if (!adapter || !ollaclassUrl) {
+      // OllaClass unavailable - fall back to default category
+      const defaultCategory = config.class.fallbackCategory || 'implement';
+      const tier = resolveTier(`ollasurf/${defaultCategory}`);
+      const result = await executeWithSwitching(tier, body, virtualModel);
+      return result;
+    }
+
+    const classificationRequest = {
+      method: 'POST',
+      url: ollaclassUrl,
+      headers: { 'Content-Type': 'application/json' },
+      body: {
+        prompt: body.messages?.[0]?.content || body.prompt || '',
+        action: body.action || 'implement',
+      },
+    };
+
+    let classification;
+    try {
+      const classificationResponse = await adapter.call(classificationRequest);
+      classification = classificationResponse.body;
+    } catch (err) {
+      const defaultCategory = config.class.fallbackCategory || 'implement';
+      const tier = resolveTier(`ollasurf/${defaultCategory}`);
+      const result = await executeWithSwitching(tier, body, virtualModel);
+      return result;
+    }
+
+    const category = classification?.category || classification?.result?.category || config.class.fallbackCategory || 'implement';
+    const mappedModel = mapCategoryToModel(category);
+
+    // Route to the mapped tier
+    const tier = resolveTier(`ollasurf/${mappedModel}`);
+    const result = await executeWithSwitching(tier, body, virtualModel);
+    return result;
+  }
+
+  // Map category -> virtual model
+  function mapCategoryToModel(category) {
+    const categoryMap = {
+      trivial: 'trivial',
+      research: 'research',
+      implement: 'implement',
+      hard_reasoning: 'hard',
+    };
+    return categoryMap[category] || 'implement';
+  }
 
   // Try routing with automated switching across providers in tier
   async function executeWithSwitching(tier, body, virtualModel) {

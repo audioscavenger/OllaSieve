@@ -23,11 +23,12 @@ function createClassApp(config, ledger) {
         return res.status(400).json({ error: 'Missing prompt in request body' });
       }
 
-      const { adapter } = app.locals.ollaclass;
+      const ollaclass = app.locals.ollaclass;
+      const adapter = ollaclass ? ollaclass.adapter : null;
       const tev1Endpoint = config.class.tev1Endpoint || 'http://127.0.0.1:11433/v1/systemone';
 
-      if (!adapter) {
-        return res.status(500).json({ error: 'Adapter not available' });
+      if (!ollaclass || !adapter) {
+        return res.status(501).json({ error: 'Classifier not yet implemented (ticket #06)' });
       }
 
       // Build Jev-style payload
