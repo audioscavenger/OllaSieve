@@ -4,12 +4,12 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Config file (`ollasieve.config.json`) loads and validates against schema
-- [ ] Env var overrides applied (secrets referenced by name, never stored in config)
-- [ ] SQLite DB created with WAL mode enabled
-- [ ] Plugin registry loads plugins from config array
-- [ ] OllaSurf server starts on :11400, health endpoint returns 200
-- [ ] OllaClass server starts on :11401, health endpoint returns 200
-- [ ] Both servers optional and independently activatable via config flags
+- [x] Config file (`ollasieve.config.json`) loads and validates against schema
+- [x] Env var overrides applied (secrets referenced by name, never stored in config)
+- [x] SQLite DB created with WAL mode enabled
+- [x] Plugin registry loads plugins from config array
+- [x] OllaSurf server starts on :11400, health endpoint returns 200
+- [x] OllaClass server starts on :11401, health endpoint returns 200
+- [x] Both servers optional and independently activatable via config flags
