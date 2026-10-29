@@ -35,6 +35,15 @@ describe('cli', () => {
     assert.deepEqual(args._, ['serve']);
   });
 
+  test('parseArgs rejects unknown flags with a CLI error', () => {
+    assert.throws(() => parseArgs(['--deubg']), (err) => err.isCliError === true);
+  });
+
+  test('parseArgs accepts positionals without throwing', () => {
+    const args = parseArgs(['serve']);
+    assert.deepEqual(args._, ['serve']);
+  });
+
   test('printHelp outputs usage text', () => {
     const lines = [];
     const origLog = console.log;

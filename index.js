@@ -32,24 +32,39 @@ const path = require('path');
  * Bootstraps and starts the OllaSieve service.
  *
  * Dependency-injection order matters:
- *   1. config  — load + validate configuration
- *   2. db      — open SQLite (WAL) so cap-ledger can persist usage
- *   3. adapter — create RealAdapter BEFORE apps reference it (bug fix:
+ *   1. config  - load + validate configuration
+ *   2. db      - open SQLite (WAL) so cap-ledger can persist usage
+ *   3. adapter - create RealAdapter BEFORE apps reference it (bug fix:
  *               previously `adapter` was referenced before `const`
  *               declaration, causing Temporal Dead Zone error)
- *   4. apps    — createSurfApp / createClassApp (each wires its own routes)
- *   5. plugins — registry.load() calls each plugin's init(app, config, ledger, adapter)
- *   6. listen  — bind HTTP servers to configured ports
+ *   4. apps    - createSurfApp / createClassApp (each wires its own routes)
+ *   5. plugins - registry.load() calls each plugin's init(app, config, ledger, adapter)
+ *   6. listen  - bind HTTP servers to configured ports
  *
  * @returns {Promise<void>}
  */
 async function main() {
-  const args = parseArgs(process.argv.slice(2));
+  let args;
+  try {
+    args = parseArgs(process.argv.slice(2));
+  } catch (err) {
+    if (err.isCliError) {
+      console.error(err.message);
+      process.exit(1);
+    }
+    throw err;
+  }
   if (args.help) {
     printHelp();
     process.exit(0);
   }
   const debug = args.debug;
+
+  // When launched by npm's start script without the "--" separator, npm strips
+  // unknown flags (including --debug). Warn once so the user knows tracing is off.
+  if (process.env.npm_lifecycle_event === 'start' && !debug) {
+    console.log('OllaSieve: debug tracing is off. Use "npm start -- --debug" or "npm run debug".');
+  }
 
   const config = loadConfig();
 
@@ -68,7 +83,7 @@ async function main() {
    */
   const adapter = new RealAdapter();
 
-  // Plugin registry — loads src/plugins/*/index.js and calls init()
+  // Plugin registry — loads src/plugins/<name>/index.js and calls init()
   const registry = new PluginRegistry();
 
   // JSONL decision-trace log lives beside the SQLite ledger (data/ollasieve.log.jsonl).
@@ -106,7 +121,7 @@ async function main() {
 
   if (surfApp) {
     const surfServer = surfApp.listen(config.server.surfPort, config.server.host, () => {
-      console.log(`OllaSurf listening on ${config.server.host}:${config.server.surfPort}`);
+      console.log(`OllaSurf listening on ${config.server.host}:${config.server.surfPort} (debug tracing: ${debug ? 'on' : 'off'})`);
     });
     servers.push(surfServer);
   } else {
@@ -115,7 +130,7 @@ async function main() {
 
   if (classApp) {
     const classServer = classApp.listen(config.server.classPort, config.server.host, () => {
-      console.log(`OllaClass listening on ${config.server.host}:${config.server.classPort}`);
+      console.log(`OllaClass listening on ${config.server.host}:${config.server.classPort} (debug tracing: ${debug ? 'on' : 'off'})`);
     });
     servers.push(classServer);
   } else {
