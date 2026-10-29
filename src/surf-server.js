@@ -1,5 +1,5 @@
 /*
- * src/surf-server.js — OllaSurf Express app factory.
+ * src/surf-server.js - OllaSurf Express app factory.
  *
  * Creates the Express application for OllaSurf on :11400.
  * Wires: health, proxy endpoints (/v1/chat/completions, /v1/models),
@@ -47,12 +47,12 @@ function createSurfApp(config, ledger, adapter, options = {}) {
   app.use(createRequestLogger('OllaSurf', { debug }));
   app.use(express.json({ limit: '50mb' }));
 
-  // Health endpoint — used by load balancers / startup scripts
+  // Health endpoint - used by load balancers / startup scripts
   app.get('/health', (req, res) => {
     res.json({ status: 'ok', service: 'OllaSurf', port: config.server.surfPort });
   });
 
-  // Virtual model listing — tells OpenCode / clients which ollasurf/* models exist
+  // Virtual model listing - tells OpenCode / clients which ollasurf/* models exist
   app.get('/v1/models', (req, res) => {
     const virtualModels = ['auto', 'trivial', 'research', 'implement', 'hard'].map((m) => ({
       id: `ollasurf/${m}`, object: 'model', created: Date.now(), owned_by: 'OllaSieve',
@@ -60,7 +60,7 @@ function createSurfApp(config, ledger, adapter, options = {}) {
     res.json({ object: 'list', data: virtualModels });
   });
 
-  // Main proxy endpoint — receives chat-completion requests and routes to provider(s)
+  // Main proxy endpoint - receives chat-completion requests and routes to provider(s)
   app.post('/v1/chat/completions', async (req, res) => {
     try {
       const virtualModel = req.body?.model;
@@ -150,7 +150,7 @@ async function classifyAndRoute(virtualModel, body, config, ledger, adapter, swi
     const tier = resolveTier(cat === 'hard_reasoning' ? 'hard' : cat, config);
     return executeWithSwitching(tier, body, { ledger, adapter, switchConfig, logger: log, requestId });
   } catch {
-    // Classification failed — fall back to safe default tier
+    // Classification failed - fall back to safe default tier
     const tier = resolveTier(`ollasurf/${config.class.fallbackCategory || 'implement'}`, config);
     return executeWithSwitching(tier, body, { ledger, adapter, switchConfig, logger: log, requestId });
   }

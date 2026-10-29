@@ -1,5 +1,5 @@
 /*
- * src/adapter-base.js — Provider client adapter base class.
+ * src/adapter-base.js - Provider client adapter base class.
  *
  * Defines the minimal interface all adapters must implement:
  *   call(request) -> Promise<{ status, body, usage, latencyMs }>

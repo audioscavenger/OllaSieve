@@ -1,4 +1,4 @@
-// tests/integration/ollama-integration.test.js — Real Ollama proxy flow (#09).
+// tests/integration/ollama-integration.test.js - Real Ollama proxy flow (#09).
 const { test, describe, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 

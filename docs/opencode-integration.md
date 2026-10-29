@@ -16,6 +16,6 @@ with virtual models: auto / trivial / research / implement / hard.
 `classifier-endpoint.json`: points at OllaClass `:11401/v1/systemone`.
 
 ## Verification
-- `npm start` — both health endpoints return 200
-- `npm run test:integration` — Ollama :11434 reachable → proxy flow + usage tracked; skip gracefully if unreachable
-- `npm test` — 35 unit tests pass
+- `npm start` - both health endpoints return 200
+- `npm run test:integration` - Ollama :11434 reachable → proxy flow + usage tracked; skip gracefully if unreachable
+- `npm test` - 35 unit tests pass

@@ -235,7 +235,7 @@ function resolveEnv(name) {
 /**
  * Walks all provider entries in every tier and resolves apiKeyEnv references.
  * The resolved value is stored at `provider._resolvedApiKey` (kept out of any
- * config serialization — secrets are never persisted).
+ * config serialization - secrets are never persisted).
  *
  * @param {object} config - Configuration object (mutated in-place).
  */

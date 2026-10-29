@@ -28,7 +28,7 @@ npm install-scripts approve better-sqlite3
 npm install
 ```
 
-> This runs **after** `npm install`, not before — it operates on the installed package and writes the approval into `package.json`.
+> This runs **after** `npm install`, not before - it operates on the installed package and writes the approval into `package.json`.
 
 ### Configuration
 Create `ollasieve.config.json` in project root:
@@ -76,8 +76,14 @@ npm start
 # Deep debug tracing: trace plugin requests (prompts) and replies (wrapped OllaClass responses)
 npm start -- --debug
 
+# Equivalent shortcut
+npm run debug
+
 # Show help
 npm start -- --help
+
+# Equivalent shortcut
+npm run help
 
 # Run unit tests
 npm test
@@ -141,7 +147,7 @@ If the JSONL file write fails, the logger degrades to console-only output and th
 # Liveness
 curl -s http://127.0.0.1:11400/health
 
-# Request ledger — last 50 usage_events (provider, model, tokens, cost, status, latency, switched_from)
+# Request ledger - last 50 usage_events (provider, model, tokens, cost, status, latency, switched_from)
 curl -s http://127.0.0.1:11400/api/requests
 
 # Configured tiers / providers
@@ -154,7 +160,7 @@ curl -s http://127.0.0.1:11400/api/plugins
 These run against a live server (`npm start` in another terminal). Until a request has flowed through, `/api/requests` returns an empty `events` array.
 
 ### What is not exposed yet
-- Provider health — the `provider_state` table (`healthy` / `exhausted` / `cooldown`, `cooldown_until`, `consecutive_failures`, `last_error`) — is persisted to SQLite but has **no API endpoint**.
+- Provider health - the `provider_state` table (`healthy` / `exhausted` / `cooldown`, `cooldown_until`, `consecutive_failures`, `last_error`) - is persisted to SQLite but has **no API endpoint**.
 - The `/dashboard` HTML page is a v1 stub: it currently renders only the plugin list, not provider status, usage, or the request log.
 
 ## OpenCode Integration
@@ -175,4 +181,4 @@ Configure OpenCode to use OllaSurf:
 ```
 
 ## License
-MIT — see LICENSE.
+MIT - see LICENSE.

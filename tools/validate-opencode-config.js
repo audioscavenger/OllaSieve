@@ -1,4 +1,4 @@
-// tools/validate-opencode-config.js — validates opencode.jsonc + openchamber-providers.json
+// tools/validate-opencode-config.js - validates opencode.jsonc + openchamber-providers.json
 const fs = require('fs');
 const path = require('path');
 

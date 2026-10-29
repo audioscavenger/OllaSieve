@@ -160,7 +160,7 @@ I want tev1 to be on CPU only because:
 `cat E:/GPT/Ollama/tev1-0.8b-start.cmd`
 
 ```
-REM # 1. Pull (if not already) — it'll stay CPU
+REM # 1. Pull (if not already) - it'll stay CPU
 ollama pull tev1:0.8b
 
 REM # 2. Start Ollama with CPU-only flag

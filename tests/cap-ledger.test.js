@@ -1,4 +1,4 @@
-// tests/cap-ledger.test.js — Cap ledger CRUD and state-transition tests.
+// tests/cap-ledger.test.js - Cap ledger CRUD and state-transition tests.
 const { test, describe, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');

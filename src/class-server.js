@@ -1,10 +1,10 @@
 /*
- * src/class-server.js — OllaClass Express app factory.
+ * src/class-server.js - OllaClass Express app factory.
  *
  * Creates an Express application for the OllaClass classifier server.
  * Exposes:
- *   GET /health           — health endpoint
- *   POST /v1/systemone    — Jev-style classifier proxy to tev1 (port 11433)
+ *   GET /health           - health endpoint
+ *   POST /v1/systemone    - Jev-style classifier proxy to tev1 (port 11433)
  *
  * Flow:
  *   1. Receive { prompt, action } from OllaSurf (ollasurf/auto)
@@ -15,7 +15,7 @@
  *   6. Return normalized JSON to OllaSurf for tier routing
  *
  * tev1 runs CPU-only on Ollama (:11433). First request may fail (session quirk)
- * — retry once before giving up with 503.
+ * - retry once before giving up with 503.
  */
 
 const express = require('express');
@@ -39,13 +39,13 @@ function createClassApp(config, ledger, options = {}) {
   app.use(createRequestLogger('OllaClass', { debug }));
   app.use(express.json({ limit: '50mb' }));
 
-  // Health endpoint — used by load balancers / startup scripts
+  // Health endpoint - used by load balancers / startup scripts
   app.get('/health', (req, res) => {
     res.json({ status: 'ok', service: 'OllaClass', port: config.server.classPort });
   });
 
   /**
-   * POST /v1/systemone — classify a prompt via tev1 and return category.
+   * POST /v1/systemone - classify a prompt via tev1 and return category.
    * Called by OllaSurf's classifyAndRoute() for ollasurf/auto routing.
    */
   app.post('/v1/systemone', async (req, res) => {
@@ -117,7 +117,7 @@ function createClassApp(config, ledger, options = {}) {
       // Parse tev1 response into normalized output
       const parsed = parseTev1Response(response.body);
 
-      // Confidence gating — low confidence or unclear request -> fallback tier
+      // Confidence gating - low confidence or unclear request -> fallback tier
       const threshold = config.class.confidenceThreshold || 0.6;
       const isClearThreshold = 0.5;
 

@@ -36,7 +36,7 @@ function parseArgs(argv = []) {
     } else if (arg === '--debug' || arg === '-d') {
       parsed.debug = true;
     } else if (arg.startsWith('-')) {
-      // Unknown flag: emit to stderr, print help.
+      // Unknown flag: throw CLI error (handled by main()).
       // The caller (main) exits after catching.
       const err = new Error(`Unknown CLI flag: ${arg}`);
       err.isCliError = true;

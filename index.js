@@ -68,7 +68,7 @@ async function main() {
 
   const config = loadConfig();
 
-  // Open SQLite database (WAL mode) — used by cap-ledger for usage tracking
+  // Open SQLite database (WAL mode) - used by cap-ledger for usage tracking
   const db = openDatabase(config.storage.dbPath);
 
   // CapLedger composite facade: records (usage_events/caps/daily_summary) +
@@ -83,7 +83,7 @@ async function main() {
    */
   const adapter = new RealAdapter();
 
-  // Plugin registry — loads src/plugins/<name>/index.js and calls init()
+  // Plugin registry - loads src/plugins/<name>/index.js and calls init()
   const registry = new PluginRegistry();
 
   // JSONL decision-trace log lives beside the SQLite ledger (data/ollasieve.log.jsonl).
@@ -137,7 +137,7 @@ async function main() {
     console.log('OllaClass disabled (class.enabled = false)');
   }
 
-  // Graceful shutdown — close servers + db on INT/TERM
+  // Graceful shutdown - close servers + db on INT/TERM
   const shutdown = () => {
     console.log('\nShutting down...');
     servers.forEach((s) => s.close());
