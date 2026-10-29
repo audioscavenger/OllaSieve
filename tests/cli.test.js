@@ -9,6 +9,9 @@ describe('cli', () => {
     assert.ok(HELP_TEXT.includes('Usage:'));
     assert.ok(HELP_TEXT.includes('--debug'));
     assert.ok(HELP_TEXT.includes('--help'));
+    assert.ok(HELP_TEXT.includes('npm run debug'));
+    assert.ok(HELP_TEXT.includes('node index.js [--debug]'));
+    assert.ok(HELP_TEXT.includes('npm start -- [--debug]'));
   });
 
   test('parseArgs defaults to no flags', () => {
@@ -16,6 +19,13 @@ describe('cli', () => {
     assert.equal(args.help, false);
     assert.equal(args.debug, false);
     assert.deepEqual(args._, []);
+    assert.deepEqual(args, { help: false, debug: false, _: [] });
+  });
+
+  test('parseArgs with default args returns debug false', () => {
+    const args = parseArgs([]);
+    assert.equal(args.debug, false);
+    assert.deepEqual(args, { debug: false, help: false, _: [] });
   });
 
   test('parseArgs --debug enables debug', () => {

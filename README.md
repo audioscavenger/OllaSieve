@@ -76,8 +76,14 @@ npm start
 # Deep debug tracing: trace plugin requests (prompts) and replies (wrapped OllaClass responses)
 npm start -- --debug
 
+# Equivalent shortcut
+npm run debug
+
 # Show help
 npm start -- --help
+
+# Equivalent shortcut
+npm run help
 
 # Run unit tests
 npm test
