@@ -22,13 +22,20 @@ After implementing any ticket (checking all checkbox items, committing code, pas
 
 OllaSieve runs OllaSurf on :11400 and OllaClass on :11401. To kill a specific instance, find its PID first (`netstat -ano | findstr :11400`) - never kill all node.exe (OpenChamber runs as node.exe).
 
-### File-edit rules
+## Navigation
+
+- Architecture decisions live in `docs/adr/` (start with `docs/adr/0004-jsonl-observability-decision-trace.md`; see also `0001` through `0005`).
+- CLI/debug entry points: `index.js` (entry), `src/cli.js` (CLI parsing), `tests/cli.test.js`.
+
+## Editing & comments
+
+### File edits
 
 - Files under 100 lines: prefer `write` (full rewrite) over piecemeal edits.
 - No `sed`. Only `sd` (literal replace) is permitted, and only if necessary. Otherwise use `write`.
 - Thread-safe: when editing, verify the file after writing (read back or run tests) before proceeding.
 
-### Comments & documentation (must be done during implementation, never after)
+### Comments & documentation
 
 - Comments MUST BE ADDED while implementing, not retrofitted when the user notices they are missing.
 - JSDocs (`/** ... */`) required on all public functions/classes; always include `@param` / `@returns` when meaning needs more than one line.

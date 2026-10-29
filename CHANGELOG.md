@@ -35,5 +35,6 @@
 * Enhanced startup logging to show debug tracing status.
 * Added CLI tests for help, debug flag, and unknown flag rejection.
 * Applied the house comments rule across the codebase: scanned all `src/`, `tests/`, `tools/`, and root JS files and converted every run of 3 or more consecutive `//` comment lines into a multi-line block comment; the scan now reports no remaining runs longer than 2 lines.
+* Added a navigation pointer in `AGENTS.md` to `docs/adr/` (including `0004-jsonl-observability-decision-trace.md`) and CLI/debug entry points (`index.js`, `src/cli.js`, `tests/cli.test.js`), and consolidated the file-edit and comments/documentation rules into a single `## Editing & comments` section (#11).
 
 ## Released
