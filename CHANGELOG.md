@@ -29,5 +29,6 @@
 * Implemented the JSONL decision trace events (ticket #04): provider_attempt and request_summary events now emit through an injected sink, with a default JSONL file sink writing to data/ollasieve.log.jsonl (10 MB rotation, keep 5 files) and console degradation on write failure; access lines emit at debug level via the --debug flag. Suite green (59/59).
 * Added startup config validation for ports, db path, and provider tiers (fails fast with actionable error), and updated the README Observability section for the JSONL decision trace, log capture, and debug access lines.
 * Updated `.eslintrc.json` with the compatible style options from the proposed prettier config (2-space indent, 80-char max line length, single quotes, semicolons); prettier itself was not adopted as the formatter.
+* Tightened the house comments rule in AGENTS.md: no more than 2 consecutive `//` comment lines; a third consecutive line requires a block comment.
 
 ## Released

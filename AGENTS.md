@@ -32,7 +32,7 @@ OllaSieve runs OllaSurf on :11400 and OllaClass on :11401. To kill a specific in
 
 - Comments MUST BE ADDED while implementing, not retrofitted when the user notices they are missing.
 - JSDocs (`/** ... */`) required on all public functions/classes; always include `@param` / `@returns` when meaning needs more than one line.
-- When more than 2 consecutive lines of `//` are needed to carry meaning, replace them with a block comment `/* ... */` (or `/** ... */` for JSDoc).
+- No more than 2 consecutive `//` comment lines may carry meaning. When a third consecutive line is needed, replace them with a block comment `/* ... */` (or `/** ... */` for JSDoc).
 - Module-level explanation must describe interaction with other modules (dependency graph / architecture, not just what the file does alone).
 
 ## House style
