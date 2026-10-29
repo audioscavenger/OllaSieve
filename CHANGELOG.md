@@ -27,5 +27,6 @@
 * Fixed the dead OllaSurf proxy wiring (ticket #02): populated `surf.tiers` in `ollasieve.config.json`, passed the CapLedger facade into the apps and plugin registry, built `switchConfig` from `config.surf`, made `executeWithSwitching` iterate provider attempts with failover and last-error reporting, and pointed `/api/requests` at the ledger's `getRequestLog`. Proxied requests now return real upstream responses and usage events are recorded; suite green (45/45) and lint clean.
 * Locked the module system for the current phase as CommonJS (ADR 0005): kept `require`/`module.exports`, deferred ESM migration, and noted Fastify or Hono as the fallback framework swap if the Express 4 async error-handling gap ever becomes operational.
 * Implemented the JSONL decision trace events (ticket #04): provider_attempt and request_summary events now emit through an injected sink, with a default JSONL file sink writing to data/ollasieve.log.jsonl (10 MB rotation, keep 5 files) and console degradation on write failure; access lines emit at debug level via the --debug flag. Suite green (59/59).
+* Added startup config validation for ports, db path, and provider tiers (fails fast with actionable error), and updated the README Observability section for the JSONL decision trace, log capture, and debug access lines.
 
 ## Released

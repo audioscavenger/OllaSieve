@@ -69,8 +69,65 @@ const DEFAULT_CONFIG = {
 };
 
 /**
+ * Validates a TCP port value. Valid ports are integers within 1..65535.
+ *
+ * @param {number} port - Port value to check.
+ * @param {string} fieldName - Config field name used in error messages.
+ * @returns {string[]} Array of error strings (empty when valid).
+ */
+function validatePort(port, fieldName) {
+  const errors = [];
+  if (typeof port !== 'number' || !Number.isInteger(port) || port < 1 || port > 65535) {
+    errors.push(`${fieldName} must be a number between 1 and 65535`);
+  }
+  return errors;
+}
+
+/**
+ * Validates the provider tiers configuration shape: surf.tiers must be an
+ * array of tier objects, each with a providers array of provider entries
+ * carrying a non-empty id and base_url.
+ *
+ * @param {object} config - Config object to validate.
+ * @param {string[]} errors - Accumulator array of validation error messages.
+ * @returns {void}
+ */
+function validateTiers(config, errors) {
+  if (!config.surf) return;
+  if (!Array.isArray(config.surf.tiers)) {
+    errors.push('surf.tiers must be an array');
+    return;
+  }
+  config.surf.tiers.forEach((tier, tierIndex) => {
+    const tierLabel = `surf.tiers[${tierIndex}]`;
+    if (!tier || typeof tier !== 'object') {
+      errors.push(`${tierLabel} must be an object`);
+      return;
+    }
+    if (!Array.isArray(tier.providers)) {
+      errors.push(`${tierLabel}.providers must be an array`);
+      return;
+    }
+    tier.providers.forEach((provider, providerIndex) => {
+      const providerLabel = `${tierLabel}.providers[${providerIndex}]`;
+      if (!provider || typeof provider !== 'object') {
+        errors.push(`${providerLabel} must be an object`);
+        return;
+      }
+      if (typeof provider.id !== 'string' || provider.id.trim() === '') {
+        errors.push(`${providerLabel}.id must be a non-empty string`);
+      }
+      if (typeof provider.base_url !== 'string' || provider.base_url.trim() === '') {
+        errors.push(`${providerLabel}.base_url must be a non-empty string`);
+      }
+    });
+  });
+}
+
+/**
  * Validates a config object's structural integrity.
- * Checks version, server section, and plugins array.
+ * Checks version, server ports, storage dbPath, surf tiers, and plugins array
+ * so startup fails fast with actionable error messages on misconfiguration.
  *
  * @param {object} config - Config object to validate.
  * @returns {string[]} Array of validation error messages (empty if valid).
@@ -84,9 +141,14 @@ function validate(config) {
   if (config.version !== 1) errors.push('version must be 1');
   if (!config.server || typeof config.server !== 'object') errors.push('server section required');
   else {
-    if (typeof config.server.surfPort !== 'number') errors.push('server.surfPort must be a number');
-    if (typeof config.server.classPort !== 'number') errors.push('server.classPort must be a number');
+    errors.push(...validatePort(config.server.surfPort, 'server.surfPort'));
+    errors.push(...validatePort(config.server.classPort, 'server.classPort'));
   }
+  if (!config.storage || typeof config.storage !== 'object') errors.push('storage section required');
+  else if (typeof config.storage.dbPath !== 'string' || config.storage.dbPath.trim() === '') {
+    errors.push('storage.dbPath must be a non-empty string');
+  }
+  validateTiers(config, errors);
   if (!Array.isArray(config.plugins)) errors.push('plugins must be an array');
   return errors;
 }

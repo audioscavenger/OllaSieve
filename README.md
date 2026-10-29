@@ -111,11 +111,17 @@ Visit `http://localhost:11400/dashboard` for:
 
 ## Observability
 
-There is no log file — all diagnostic output goes to the terminal (stdout/stderr). The durable record is the SQLite ledger at `data/ollasieve.db`, exposed by OllaSurf on `:11400` via the JSON APIs below.
+There are two surfaces. The durable record is the SQLite ledger at `data/ollasieve.db`, exposed by OllaSurf on `:11400` via the JSON APIs below. The narrative surface is a JSON Lines decision trace at `data/ollasieve.log.jsonl`.
+
+### JSONL decision trace
+
+The JSONL log records how a request was handled, decision by decision. `provider_attempt` events capture the outcome of a single provider attempt (level info). `request_summary` events are the terminal per-request record, carrying the request id, model, tier, status, provider, attempts, and latency. Events flow through an injected sink; the default sink appends one JSON object per line and degrades to console-only output if the file write fails, so logging never fails a request.
+
+Rotation rolls the log file at 10 MB and keeps the 5 most recent files.
 
 ### Capturing logs
 ```bash
-# Live, terminal only
+# Live, terminal only (JSONL decision trace also written to data/ollasieve.log.jsonl)
 npm start
 
 # Live, plus a durable copy on disk
@@ -123,6 +129,8 @@ npm start 2>&1 | tee ollasieve.log
 ```
 
 Every HTTP request is logged by a per-request middleware (`src/request-log.js`) as a single line, tagged with the service name. Successes (2xx/3xx) via `console.log`, client errors (4xx) via `console.warn`, server errors (5xx) via `console.error`. This covers `/health`, proxy endpoints, and dashboard routes, so hitting the endpoints from a client (OpenCode/OpenChamber, curl, etc.) always produces console output.
+
+Deep debug tracing (via `npm start -- --debug`) adds per-request access lines (request id, method, url, status, latency) plus raw prompt traces through to the wrapped classifier reply. Access lines are also written as JSONL decision events when debug is on.
 
 ### Observability checks (OllaSurf :11400)
 ```bash

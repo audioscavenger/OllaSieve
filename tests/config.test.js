@@ -46,6 +46,34 @@ describe('config', () => {
     assert.equal(errors.length, 0);
   });
 
+  test('rejects ports outside the valid range', () => {
+    const errors = validate({ version: 1, server: { surfPort: 99999, classPort: 0 } });
+    assert.ok(errors.some((e) => e.includes('server.surfPort must be a number between 1 and 65535')));
+    assert.ok(errors.some((e) => e.includes('server.classPort must be a number between 1 and 65535')));
+  });
+
+  test('rejects empty storage dbPath', () => {
+    const errors = validate({ version: 1, storage: { dbPath: '   ' } });
+    assert.ok(errors.some((e) => e.includes('storage.dbPath must be a non-empty string')));
+  });
+
+  test('rejects malformed surf tiers', () => {
+    const errors = validate({ version: 1, surf: { tiers: [{ providers: 'nope' }] } });
+    assert.ok(errors.some((e) => e.includes('surf.tiers[0].providers must be an array')));
+  });
+
+  test('rejects provider entries missing id or base_url', () => {
+    const errors = validate({ version: 1, surf: { tiers: [{ providers: [{ id: '', base_url: '' }] }] } });
+    assert.ok(errors.some((e) => e.includes('surf.tiers[0].providers[0].id must be a non-empty string')));
+    assert.ok(errors.some((e) => e.includes('surf.tiers[0].providers[0].base_url must be a non-empty string')));
+  });
+
+  test('loadConfig fails fast on invalid config file', () => {
+    const cfgPath = path.join(tmpDir, 'invalid.json');
+    fs.writeFileSync(cfgPath, JSON.stringify({ version: 1, server: { surfPort: 70000 } }));
+    assert.throws(() => loadConfig(cfgPath), /Config validation failed/);
+  });
+
   test('resolves dbPath relative to config file', () => {
     const cfgPath = path.join(tmpDir, 'sub', 'test.json');
     fs.mkdirSync(path.dirname(cfgPath), { recursive: true });
