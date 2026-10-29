@@ -62,31 +62,56 @@ function findFirstAvailableProvider(tier, ledger, excludeProviderId) {
 /**
  * Executes a provider call with automated switching.
  * Iterates providers in the tier in priority order; skips unavailable
- * ones; records usage; marks exhausted at predictive threshold.
+ * ones; records usage; marks exhausted at predictive threshold. Emits
+ * provider_attempt and terminal request_summary events through the injected
+ * logger (decision trace per ADR 0004).
  *
  * @param {object} tier - Tier containing providers to try.
  * @param {object} body - Chat completion request body.
- * @param {object} deps - Dependency map: { ledger, adapter, switchConfig }.
+ * @param {object} deps - Dependency map: { ledger, adapter, switchConfig, logger, requestId }.
  * @param {object} deps.switchConfig - { predictiveThreshold, reactiveCooldownMs }.
+ * @param {object} [deps.logger] - Logger with log(type, message, fields) for events.
+ * @param {string} [deps.requestId] - Correlation id for the request trace.
  * @returns {Promise<{success: boolean, status: number, body?: object, error?: object}>}
  */
 async function executeWithSwitching(tier, body, deps) {
-  const { ledger, adapter, switchConfig } = deps;
+  const { ledger, adapter, switchConfig, logger, requestId } = deps;
+  const noopLogger = { log: () => {}, warn: () => {}, error: () => {}, debug: () => {} };
+  const log = logger || noopLogger;
   const providers = tier && tier.providers ? tier.providers : [];
-  if (providers.length === 0) {
-    return { success: false, status: 503, error: { error: 'No available providers', providersExhausted: true } };
-  }
+  const startedAt = Date.now();
+  const predictiveThreshold = switchConfig?.predictiveThreshold ?? 0.97;
+  const reactiveCooldownMs = switchConfig?.reactiveCooldownMs ?? 3000;
 
   let lastError = null;
   let switchedFrom = null;
+  let attempts = 0;
 
-  const predictiveThreshold = switchConfig?.predictiveThreshold ?? 0.97;
-  const reactiveCooldownMs = switchConfig?.reactiveCooldownMs ?? 3000;
+  const emitRequestSummary = (status, provider, error) => {
+    log.log('request_summary', status === 200 ? 'proxy request completed' : 'proxy request failed', {
+      requestId,
+      model: body?.model,
+      tier: (tier && (tier.name || tier.type)) || 'unknown',
+      status,
+      provider,
+      switchedFrom,
+      attempts,
+      latencyMs: Date.now() - startedAt,
+      error: error ? error.message : null,
+    });
+  };
+
+  if (providers.length === 0) {
+    emitRequestSummary(503, null, new Error('No available providers'));
+    return { success: false, status: 503, error: { error: 'No available providers', providersExhausted: true } };
+  }
 
   for (let attempt = 0; attempt < providers.length; attempt++) {
     const provider = findFirstAvailableProvider(tier, ledger, switchedFrom);
     if (!provider) break;
 
+    attempts += 1;
+    const attemptStartedAt = Date.now();
     const request = {
       method: 'POST',
       url: provider.base_url + '/v1/chat/completions',
@@ -100,37 +125,56 @@ async function executeWithSwitching(tier, body, deps) {
     let response;
     try {
       response = await adapter.call(request);
+      const latencyMs = Date.now() - attemptStartedAt;
+      const outcome = response.status === 200 || response.status === 201 ? 'success' : 'error';
+      // Decision trace: outcome of a single provider attempt (info level).
+      log.log('provider_attempt', `provider ${provider.id} attempt ${outcome}`, {
+        requestId,
+        providerId: provider.id,
+        outcome,
+        status: response.status,
+        latencyMs,
+        error: outcome === 'error' ? `status ${response.status}` : null,
+      });
+      if (outcome === 'error') {
+        lastError = new Error(`Provider ${provider.id} returned status ${response.status}`);
+        ledger.recordFailure(provider.id, lastError);
+        switchedFrom = provider.id;
+        continue;
+      }
+
+      // Record usage against provider caps + daily summary
+      if (response.usage) {
+        ledger.recordUsage(provider.id, response.body.model, response.usage, response.status, response.latencyMs, switchedFrom);
+      }
+
+      // Predictive switch: mark provider exhausted when cap exceeded
+      const capsCheck = ledger.checkCaps(provider.id, predictiveThreshold);
+      if (capsCheck.exceeded) {
+        ledger.setState(provider.id, 'exhausted', new Date(Date.now() + reactiveCooldownMs).toISOString());
+      }
+
+      emitRequestSummary(response.status, provider.id, null);
+      return { success: true, status: response.status, body: response.body };
     } catch (err) {
-      // Provider call failed: record failure state and move to next provider.
+      const latencyMs = Date.now() - attemptStartedAt;
+      // Decision trace: provider call failed; record and fail over.
+      log.log('provider_attempt', `provider ${provider.id} attempt failed`, {
+        requestId,
+        providerId: provider.id,
+        outcome: 'error',
+        status: null,
+        latencyMs,
+        error: err.message,
+      });
       lastError = err;
       ledger.recordFailure(provider.id, err);
       switchedFrom = provider.id;
       continue;
     }
-
-    // Provider answered with a non-success status (e.g. 429): treat as failure
-    // and fail over to the next provider in the tier.
-    if (!(response.status === 200 || response.status === 201)) {
-      lastError = new Error(`Provider ${provider.id} returned status ${response.status}`);
-      ledger.recordFailure(provider.id, lastError);
-      switchedFrom = provider.id;
-      continue;
-    }
-
-    // Record usage against provider caps + daily summary
-    if (response.usage) {
-      ledger.recordUsage(provider.id, response.body.model, response.usage, response.status, response.latencyMs, switchedFrom);
-    }
-
-    // Predictive switch: mark provider exhausted when cap exceeded
-    const capsCheck = ledger.checkCaps(provider.id, predictiveThreshold);
-    if (capsCheck.exceeded) {
-      ledger.setState(provider.id, 'exhausted', new Date(Date.now() + reactiveCooldownMs).toISOString());
-    }
-
-    return { success: true, status: response.status, body: response.body };
   }
 
+  emitRequestSummary(503, null, lastError);
   return { success: false, status: 503, error: { error: 'All providers exhausted', lastError: lastError ? lastError.message : null } };
 }
 

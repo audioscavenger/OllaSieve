@@ -24,13 +24,14 @@ const { createRequestLogger } = require('./request-log');
  * @param {object} config - Full OllaSieve config (includes surf.tiers, server, class).
  * @param {Database} ledger - SQLite db instance (passed to proxy-router for usage tracking).
  * @param {ProviderAdapter} adapter - Provider adapter (RealAdapter / MockAdapter / null for tests).
- * @param {object} [options] - Optional flags; { debug: boolean } enables deep debug tracing.
+ * @param {object} [options] - Optional flags; { debug: boolean, sink: Function } enables deep debug tracing and event injection.
  * @returns {express.Application} Configured Express app.
  */
 function createSurfApp(config, ledger, adapter, options = {}) {
   const app = express();
-  const debug = Boolean(options && options.debug);
-  const log = createLogger('OllaSurf', { debug });
+  const opts = options || {};
+  const debug = Boolean(opts.debug);
+  const log = createLogger('OllaSurf', { debug, sink: opts.sink, logPath: opts.logPath, maxBytes: opts.maxBytes });
   // Switching policy consumed by proxy-router's executeWithSwitching.
   // predictiveThreshold (default 0.97) drives predictive exhaustion checks;
   // reactiveCooldownMs drives cooldown windows after failures.
@@ -38,8 +39,8 @@ function createSurfApp(config, ledger, adapter, options = {}) {
     predictiveThreshold: (config.surf && config.surf.switchThreshold) ?? 0.97,
     reactiveCooldownMs: (config.surf && config.surf.reactiveCooldownMs) ?? 3000,
   };
-  // One-line-per-request logging across all OllaSurf routes (incl. /health, proxy)
-  app.use(createRequestLogger('OllaSurf'));
+  // One-line-per-request access logging across all OllaSurf routes (incl. /health, proxy)
+  app.use(createRequestLogger('OllaSurf', { debug }));
   app.use(express.json({ limit: '50mb' }));
 
   // Health endpoint — used by load balancers / startup scripts
@@ -63,13 +64,15 @@ function createSurfApp(config, ledger, adapter, options = {}) {
 
       // Deep debug: trace the incoming chat completion prompt that will flow
       // into the plugin chain (OllaClass classifier / provider adapter).
+      // Debug lines are console-only deep traces; the JSONL decision trace
+      // carries metadata only (no prompt bodies).
       if (debug) {
-        log.debug(`chat completion received: model=${virtualModel} prompt=${extractPromptText(req.body)}`);
+        log.debug('proxy_request', `chat completion received: model=${virtualModel} prompt=${extractPromptText(req.body)}`, { requestId: req.id, model: virtualModel });
       }
 
       // Auto-routing: delegate to OllaClass classifier first
       if (virtualModel === 'ollasurf/auto') {
-        const result = await classifyAndRoute(virtualModel, req.body, config, ledger, adapter, switchConfig);
+        const result = await classifyAndRoute(virtualModel, req.body, config, ledger, adapter, switchConfig, log, req.id);
         if (!result.success) return res.status(result.status || 503).json(result.error);
         return res.status(result.status).json(result.body);
       }
@@ -78,7 +81,7 @@ function createSurfApp(config, ledger, adapter, options = {}) {
       const tier = resolveTier(virtualModel, config);
       if (!tier) return res.status(400).json({ error: `Unknown virtual model: ${virtualModel}` });
 
-      const result = await executeWithSwitching(tier, req.body, { ledger, adapter, switchConfig });
+      const result = await executeWithSwitching(tier, req.body, { ledger, adapter, switchConfig, logger: log, requestId: req.id });
       if (!result.success) return res.status(result.status || 503).json(result.error);
       return res.status(result.status).json(result.body);
     } catch (err) {
@@ -120,14 +123,16 @@ function extractPromptText(body) {
  * @param {Database} ledger - SQLite instance.
  * @param {ProviderAdapter} adapter - Adapter for calling OllaClass.
  * @param {object} switchConfig - Switching policy: { predictiveThreshold, reactiveCooldownMs }.
+ * @param {object} log - OllaSurf logger carrying the decision-trace sink.
+ * @param {string} requestId - Correlation id for the request trace.
  * @returns {Promise<{success: boolean, status?: number, body?: object, error?: object}>}
  */
-async function classifyAndRoute(virtualModel, body, config, ledger, adapter, switchConfig) {
+async function classifyAndRoute(virtualModel, body, config, ledger, adapter, switchConfig, log, requestId) {
   const ollaclassUrl = config.server.classPort ? `http://127.0.0.1:${config.server.classPort}/v1/systemone` : null;
   // If no adapter or no OllaClass server configured, skip classification and use fallback tier
   if (!adapter || !ollaclassUrl) {
     const tier = resolveTier(`ollasurf/${config.class.fallbackCategory || 'implement'}`, config);
-    return executeWithSwitching(tier, body, { ledger, adapter, switchConfig });
+    return executeWithSwitching(tier, body, { ledger, adapter, switchConfig, logger: log, requestId });
   }
 
   try {
@@ -137,11 +142,11 @@ async function classifyAndRoute(virtualModel, body, config, ledger, adapter, swi
     });
     const cat = clsRes.body?.category || config.class.fallbackCategory || 'implement';
     const tier = resolveTier(cat === 'hard_reasoning' ? 'hard' : cat, config);
-    return executeWithSwitching(tier, body, { ledger, adapter, switchConfig });
+    return executeWithSwitching(tier, body, { ledger, adapter, switchConfig, logger: log, requestId });
   } catch {
     // Classification failed — fall back to safe default tier
     const tier = resolveTier(`ollasurf/${config.class.fallbackCategory || 'implement'}`, config);
-    return executeWithSwitching(tier, body, { ledger, adapter, switchConfig });
+    return executeWithSwitching(tier, body, { ledger, adapter, switchConfig, logger: log, requestId });
   }
 }
 

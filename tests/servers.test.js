@@ -90,6 +90,37 @@ describe('servers', () => {
     srv.close();
   });
 
+  test('proxied request emits provider_attempt and request_summary through the injected sink', async () => {
+    const events = [];
+    const sink = (event) => { events.push(event); return true; };
+    const ledger = new CapLedger(db);
+    const adapter = new MockAdapter([
+      { status: 200, body: { model: 'test-model', choices: [{ message: { content: 'hello' } }] }, usage: { tokensIn: 5, tokensOut: 3 }, latencyMs: 10 },
+    ]);
+    const app = createSurfApp(config, ledger, adapter, { sink });
+    const srv = app.listen(0);
+    const port = srv.address().port;
+
+    db.prepare('INSERT OR IGNORE INTO providers (id, tier, type, base_url) VALUES (?, \'free\', \'ollama\', ?)').run('ollama-local', 'http://127.0.0.1:9');
+
+    const res = await fetch(`http://127.0.0.1:${port}/v1/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'ollasurf/trivial', messages: [{ role: 'user', content: 'hi' }] }),
+    });
+    assert.equal(res.status, 200);
+
+    const attempts = events.filter((e) => e.type === 'provider_attempt');
+    assert.ok(attempts.length >= 1);
+    assert.equal(attempts[0].outcome, 'success');
+
+    const summaries = events.filter((e) => e.type === 'request_summary');
+    assert.equal(summaries.length, 1);
+    assert.equal(summaries[0].status, 200);
+
+    srv.close();
+  });
+
   test('OllaClass /v1/systemone returns 501 (not yet implemented)', async () => {
     const app = createClassApp(config, db, null);
     const srv = app.listen(0);

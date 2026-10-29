@@ -24,6 +24,7 @@ const { createSurfApp } = require('./src/surf-server');
 const { createClassApp } = require('./src/class-server');
 const { RealAdapter } = require('./src/adapter');
 const { parseArgs, printHelp } = require('./src/cli');
+const path = require('path');
 
 /**
  * Bootstraps and starts the OllaSieve service.
@@ -66,12 +67,17 @@ async function main() {
   // Plugin registry — loads src/plugins/*/index.js and calls init()
   const registry = new PluginRegistry();
 
+  // JSONL decision-trace log lives beside the SQLite ledger (data/ollasieve.log.jsonl).
+  const logPath = config.storage && config.storage.dbPath
+    ? path.join(path.dirname(config.storage.dbPath), 'ollasieve.log.jsonl')
+    : undefined;
+
   // Create Express apps (null when disabled by config flag)
   const surfApp = config.surf && config.surf.enabled
-    ? createSurfApp(config, ledger, adapter, { debug })
+    ? createSurfApp(config, ledger, adapter, { debug, logPath })
     : null;
   const classApp = config.class && config.class.enabled
-    ? createClassApp(config, ledger, { debug })
+    ? createClassApp(config, ledger, { debug, logPath })
     : null;
 
   // Load plugins into their target apps.

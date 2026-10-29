@@ -25,15 +25,16 @@ const { createRequestLogger } = require('./request-log');
  *
  * @param {object} config - Full config (server.classPort, class.* settings).
  * @param {Database} ledger - SQLite instance (passed to plugin init).
- * @param {object} [options] - Optional flags; { debug: boolean } enables deep debug tracing.
+ * @param {object} [options] - Optional flags; { debug: boolean, sink: Function } enables deep debug tracing and event injection.
  * @returns {express.Application} Configured Express app.
  */
 function createClassApp(config, ledger, options = {}) {
   const app = express();
-  const debug = Boolean(options && options.debug);
-  const log = createLogger('OllaClass', { debug });
-  // One-line-per-request logging across all OllaClass routes (incl. /health, /v1/systemone)
-  app.use(createRequestLogger('OllaClass'));
+  const opts = options || {};
+  const debug = Boolean(opts.debug);
+  const log = createLogger('OllaClass', { debug, sink: opts.sink, logPath: opts.logPath, maxBytes: opts.maxBytes });
+  // One-line-per-request access logging across all OllaClass routes (incl. /health, /v1/systemone)
+  app.use(createRequestLogger('OllaClass', { debug }));
   app.use(express.json({ limit: '50mb' }));
 
   // Health endpoint — used by load balancers / startup scripts
@@ -64,15 +65,15 @@ function createClassApp(config, ledger, options = {}) {
 
       // Deep debug: trace the classification request received from OllaSurf,
       // the Jev-wrapped payload sent to tev1, tev1's reply, and the normalized
-      // reply sent back to OllaSurf.
+      // reply sent back to OllaSurf. Debug lines are console-only deep traces.
       if (debug) {
-        log.debug(`classification request: prompt=${prompt} action=${action || 'implement'}`);
+        log.debug('classification_request', `classification request: prompt=${prompt} action=${action || 'implement'}`, { requestId: req.id, prompt, action: action || 'implement' });
       }
 
       // Build Jev-style prompt-wrapping payload for tev1
       const payload = buildJevPayload(prompt, action);
       if (debug) {
-        log.debug(`jev payload sent to tev1: ${JSON.stringify(payload)}`);
+        log.debug('jev_payload', `jev payload sent to tev1: ${JSON.stringify(payload)}`, { requestId: req.id, prompt, action: action || 'implement' });
       }
 
       // POST to tev1 endpoint
@@ -99,14 +100,14 @@ function createClassApp(config, ledger, options = {}) {
 
       if (response.status !== 200) {
         if (debug) {
-          log.debug(`tev1 response rejected: status=${response.status} body=${JSON.stringify(response.body)}`);
+          log.debug('tev1_response', `tev1 response rejected: status=${response.status} body=${JSON.stringify(response.body)}`, { requestId: req.id, status: response.status });
         }
         return res.status(response.status).json({ error: 'tev1 error', detail: response.body });
       }
 
       // Deep debug: trace tev1's raw reply.
       if (debug) {
-        log.debug(`tev1 response: status=${response.status} body=${JSON.stringify(response.body)}`);
+        log.debug('tev1_response', `tev1 response: status=${response.status} body=${JSON.stringify(response.body)}`, { requestId: req.id, status: response.status });
       }
 
       // Parse tev1 response into normalized output
@@ -138,7 +139,7 @@ function createClassApp(config, ledger, options = {}) {
 
       // Deep debug: trace the reply sent back to OllaSurf.
       if (debug) {
-        log.debug(`reply sent to ollasurf: category=${category} confidence=${confidence} low_confidence=${lowConfidence}`);
+        log.debug('reply_sent', `reply sent to ollasurf: category=${category} confidence=${confidence} low_confidence=${lowConfidence}`, { requestId: req.id, category, confidence: confidence, low_confidence: lowConfidence });
       }
 
       return res.json(reply);
