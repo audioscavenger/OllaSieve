@@ -132,6 +132,10 @@ Every HTTP request is logged by a per-request middleware (`src/request-log.js`) 
 
 Deep debug tracing (via `npm start -- --debug`) adds per-request access lines (request id, method, url, status, latency) plus raw prompt traces through to the wrapped classifier reply. Access lines are also written as JSONL decision events when debug is on.
 
+### Log recovery
+
+If the JSONL file write fails, the logger degrades to console-only output and the SQLite ledger remains the source of durable facts. For the original `better-sqlite3` install blocker, see the recovery steps under Installation.
+
 ### Observability checks (OllaSurf :11400)
 ```bash
 # Liveness
