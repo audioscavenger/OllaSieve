@@ -28,7 +28,7 @@ describe('db', () => {
 
   test('creates all schema tables', () => {
     const tables = db.prepare(
-      "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+      'SELECT name FROM sqlite_master WHERE type=\'table\' ORDER BY name'
     ).all().map((r) => r.name);
     assert.ok(tables.includes('providers'));
     assert.ok(tables.includes('caps'));

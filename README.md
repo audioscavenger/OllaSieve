@@ -73,6 +73,12 @@ Create `ollasieve.config.json` in project root:
 # Start the proxy server (both OllaSurf :11400 and OllaClass :11401)
 npm start
 
+# Deep debug tracing: trace plugin requests (prompts) and replies (wrapped OllaClass responses)
+npm start -- --debug
+
+# Show help
+npm start -- --help
+
 # Run unit tests
 npm test
 

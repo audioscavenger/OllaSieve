@@ -31,7 +31,7 @@ class ProviderAdapter {
    * @returns {Promise<{status: number, body: any, usage: object|null, latencyMs: number}>}
    * @throws {Error} On network failure or non-OK status (caller handles retries).
    */
-  async call(request) {
+  async call(_request) {
     throw new Error('Not implemented: extend ProviderAdapter');
   }
 }

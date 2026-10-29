@@ -15,6 +15,7 @@
 const express = require('express');
 const { resolveTier, executeWithSwitching } = require('./proxy-router');
 const { registerDashboard } = require('./dashboard');
+const { createLogger } = require('./logger');
 const { createRequestLogger } = require('./request-log');
 
 /**
@@ -23,10 +24,20 @@ const { createRequestLogger } = require('./request-log');
  * @param {object} config - Full OllaSieve config (includes surf.tiers, server, class).
  * @param {Database} ledger - SQLite db instance (passed to proxy-router for usage tracking).
  * @param {ProviderAdapter} adapter - Provider adapter (RealAdapter / MockAdapter / null for tests).
+ * @param {object} [options] - Optional flags; { debug: boolean } enables deep debug tracing.
  * @returns {express.Application} Configured Express app.
  */
-function createSurfApp(config, ledger, adapter) {
+function createSurfApp(config, ledger, adapter, options = {}) {
   const app = express();
+  const debug = Boolean(options && options.debug);
+  const log = createLogger('OllaSurf', { debug });
+  // Switching policy consumed by proxy-router's executeWithSwitching.
+  // predictiveThreshold (default 0.97) drives predictive exhaustion checks;
+  // reactiveCooldownMs drives cooldown windows after failures.
+  const switchConfig = {
+    predictiveThreshold: (config.surf && config.surf.switchThreshold) ?? 0.97,
+    reactiveCooldownMs: (config.surf && config.surf.reactiveCooldownMs) ?? 3000,
+  };
   // One-line-per-request logging across all OllaSurf routes (incl. /health, proxy)
   app.use(createRequestLogger('OllaSurf'));
   app.use(express.json({ limit: '50mb' }));
@@ -50,9 +61,15 @@ function createSurfApp(config, ledger, adapter) {
       const virtualModel = req.body?.model;
       if (!virtualModel) return res.status(400).json({ error: 'Missing model' });
 
+      // Deep debug: trace the incoming chat completion prompt that will flow
+      // into the plugin chain (OllaClass classifier / provider adapter).
+      if (debug) {
+        log.debug(`chat completion received: model=${virtualModel} prompt=${extractPromptText(req.body)}`);
+      }
+
       // Auto-routing: delegate to OllaClass classifier first
       if (virtualModel === 'ollasurf/auto') {
-        const result = await classifyAndRoute(virtualModel, req.body, config, ledger, adapter);
+        const result = await classifyAndRoute(virtualModel, req.body, config, ledger, adapter, switchConfig);
         if (!result.success) return res.status(result.status || 503).json(result.error);
         return res.status(result.status).json(result.body);
       }
@@ -61,7 +78,7 @@ function createSurfApp(config, ledger, adapter) {
       const tier = resolveTier(virtualModel, config);
       if (!tier) return res.status(400).json({ error: `Unknown virtual model: ${virtualModel}` });
 
-      const result = await executeWithSwitching(tier, req.body, { ledger, adapter });
+      const result = await executeWithSwitching(tier, req.body, { ledger, adapter, switchConfig });
       if (!result.success) return res.status(result.status || 503).json(result.error);
       return res.status(result.status).json(result.body);
     } catch (err) {
@@ -77,6 +94,21 @@ function createSurfApp(config, ledger, adapter) {
 }
 
 /**
+ * Extracts the prompt text from a chat completion body.
+ * Supports both a plain string prompt and the OpenAI-style messages array.
+ *
+ * @param {object} body - Chat completion request body.
+ * @returns {string} Concatenated prompt text (may be empty).
+ */
+function extractPromptText(body) {
+  if (typeof body?.prompt === 'string') return body.prompt;
+  if (Array.isArray(body?.messages)) {
+    return body.messages.map((m) => `${m?.role || 'user'}: ${m?.content || ''}`).join('\n');
+  }
+  return '';
+}
+
+/**
  * Handles ollasurf/auto routing by calling OllaClass classifier endpoint,
  * then routing to the tier that matches the returned category.
  *
@@ -87,14 +119,15 @@ function createSurfApp(config, ledger, adapter) {
  * @param {object} config - App config (needs server.classPort, class.fallbackCategory).
  * @param {Database} ledger - SQLite instance.
  * @param {ProviderAdapter} adapter - Adapter for calling OllaClass.
+ * @param {object} switchConfig - Switching policy: { predictiveThreshold, reactiveCooldownMs }.
  * @returns {Promise<{success: boolean, status?: number, body?: object, error?: object}>}
  */
-async function classifyAndRoute(virtualModel, body, config, ledger, adapter) {
+async function classifyAndRoute(virtualModel, body, config, ledger, adapter, switchConfig) {
   const ollaclassUrl = config.server.classPort ? `http://127.0.0.1:${config.server.classPort}/v1/systemone` : null;
   // If no adapter or no OllaClass server configured, skip classification and use fallback tier
   if (!adapter || !ollaclassUrl) {
     const tier = resolveTier(`ollasurf/${config.class.fallbackCategory || 'implement'}`, config);
-    return executeWithSwitching(tier, body, { ledger, adapter });
+    return executeWithSwitching(tier, body, { ledger, adapter, switchConfig });
   }
 
   try {
@@ -104,12 +137,12 @@ async function classifyAndRoute(virtualModel, body, config, ledger, adapter) {
     });
     const cat = clsRes.body?.category || config.class.fallbackCategory || 'implement';
     const tier = resolveTier(cat === 'hard_reasoning' ? 'hard' : cat, config);
-    return executeWithSwitching(tier, body, { ledger, adapter });
+    return executeWithSwitching(tier, body, { ledger, adapter, switchConfig });
   } catch {
     // Classification failed — fall back to safe default tier
     const tier = resolveTier(`ollasurf/${config.class.fallbackCategory || 'implement'}`, config);
-    return executeWithSwitching(tier, body, { ledger, adapter });
+    return executeWithSwitching(tier, body, { ledger, adapter, switchConfig });
   }
 }
 
-module.exports = { createSurfApp };
+module.exports = { createSurfApp, extractPromptText };

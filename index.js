@@ -18,10 +18,12 @@
 
 const { loadConfig } = require('./src/config');
 const { openDatabase } = require('./src/db');
+const { CapLedger } = require('./src/cap-ledger');
 const { PluginRegistry } = require('./src/plugin-registry');
 const { createSurfApp } = require('./src/surf-server');
 const { createClassApp } = require('./src/class-server');
 const { RealAdapter } = require('./src/adapter');
+const { parseArgs, printHelp } = require('./src/cli');
 
 /**
  * Bootstraps and starts the OllaSieve service.
@@ -39,10 +41,21 @@ const { RealAdapter } = require('./src/adapter');
  * @returns {Promise<void>}
  */
 async function main() {
+  const args = parseArgs(process.argv.slice(2));
+  if (args.help) {
+    printHelp();
+    process.exit(0);
+  }
+  const debug = args.debug;
+
   const config = loadConfig();
 
   // Open SQLite database (WAL mode) — used by cap-ledger for usage tracking
   const db = openDatabase(config.storage.dbPath);
+
+  // CapLedger composite facade: records (usage_events/caps/daily_summary) +
+  // state (provider exhausted/cooldown). Apps receive this, not the raw db.
+  const ledger = new CapLedger(db);
 
   // Inject provider adapter at startup (swappable for testing / MockAdapter).
   // IMPORTANT: must be created before createSurfApp / createClassApp, which
@@ -55,10 +68,10 @@ async function main() {
 
   // Create Express apps (null when disabled by config flag)
   const surfApp = config.surf && config.surf.enabled
-    ? createSurfApp(config, db, adapter)
+    ? createSurfApp(config, ledger, adapter, { debug })
     : null;
   const classApp = config.class && config.class.enabled
-    ? createClassApp(config, db, adapter)
+    ? createClassApp(config, ledger, { debug })
     : null;
 
   // Load plugins into their target apps.
@@ -70,7 +83,7 @@ async function main() {
     if (name === 'ollasurf') return surfApp;
     if (name === 'ollaclass') return classApp;
     return surfApp || classApp;
-  }, db, adapter);
+  }, ledger, adapter);
 
   // Expose registry status on both apps (read by dashboard /api/plugins)
   if (surfApp) surfApp.locals.registry = registry;

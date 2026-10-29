@@ -77,8 +77,11 @@ async function executeWithSwitching(tier, body, deps) {
     return { success: false, status: 503, error: { error: 'No available providers', providersExhausted: true } };
   }
 
-  let lastError;
+  let lastError = null;
   let switchedFrom = null;
+
+  const predictiveThreshold = switchConfig?.predictiveThreshold ?? 0.97;
+  const reactiveCooldownMs = switchConfig?.reactiveCooldownMs ?? 3000;
 
   for (let attempt = 0; attempt < providers.length; attempt++) {
     const provider = findFirstAvailableProvider(tier, ledger, switchedFrom);
@@ -94,7 +97,25 @@ async function executeWithSwitching(tier, body, deps) {
       body,
     };
 
-    const response = await adapter.call(request);
+    let response;
+    try {
+      response = await adapter.call(request);
+    } catch (err) {
+      // Provider call failed: record failure state and move to next provider.
+      lastError = err;
+      ledger.recordFailure(provider.id, err);
+      switchedFrom = provider.id;
+      continue;
+    }
+
+    // Provider answered with a non-success status (e.g. 429): treat as failure
+    // and fail over to the next provider in the tier.
+    if (!(response.status === 200 || response.status === 201)) {
+      lastError = new Error(`Provider ${provider.id} returned status ${response.status}`);
+      ledger.recordFailure(provider.id, lastError);
+      switchedFrom = provider.id;
+      continue;
+    }
 
     // Record usage against provider caps + daily summary
     if (response.usage) {
@@ -102,11 +123,9 @@ async function executeWithSwitching(tier, body, deps) {
     }
 
     // Predictive switch: mark provider exhausted when cap exceeded
-    if (response.status === 200 || response.status === 201) {
-      const capsCheck = ledger.checkCaps(provider.id, switchConfig.predictiveThreshold);
-      if (capsCheck.exceeded) {
-        ledger.setState(provider.id, 'exhausted', new Date(Date.now() + switchConfig.reactiveCooldownMs).toISOString());
-      }
+    const capsCheck = ledger.checkCaps(provider.id, predictiveThreshold);
+    if (capsCheck.exceeded) {
+      ledger.setState(provider.id, 'exhausted', new Date(Date.now() + reactiveCooldownMs).toISOString());
     }
 
     return { success: true, status: response.status, body: response.body };

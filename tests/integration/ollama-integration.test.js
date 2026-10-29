@@ -11,7 +11,7 @@ const { CapLedger } = require('../../src/cap-ledger');
 const OLLAMA_URL = 'http://127.0.0.1:11434';
 const OLLAMA_MODEL = 'qwen2.5-coder:0.5b';
 
-function buildTestConfig(db, ledger) {
+function buildTestConfig(_db, _ledger) {
   const config = loadConfig();
   config.surf.tiers = [
     {
@@ -38,9 +38,9 @@ describe('ollama-integration', () => {
     if (!ollamaUp) return;
     db = openDatabase(':memory:');
     ledger = new CapLedger(db);
-    const providerStmt = db.prepare("INSERT OR IGNORE INTO providers (id, tier, type, base_url) VALUES (?, 'free', 'ollama', ?)");
+    const providerStmt = db.prepare('INSERT OR IGNORE INTO providers (id, tier, type, base_url) VALUES (?, \'free\', \'ollama\', ?)');
     providerStmt.run('ollama-local', OLLAMA_URL);
-    const capStmt = db.prepare("INSERT OR IGNORE INTO caps (provider_id, unit, limit_val, window) VALUES (?, ?, 10000, 'day')");
+    const capStmt = db.prepare('INSERT OR IGNORE INTO caps (provider_id, unit, limit_val, window) VALUES (?, ?, 10000, \'day\')');
     capStmt.run('ollama-local', 'tokens');
   });
 

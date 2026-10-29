@@ -17,6 +17,7 @@
 // — retry once before giving up with 503.
 
 const express = require('express');
+const { createLogger } = require('./logger');
 const { createRequestLogger } = require('./request-log');
 
 /**
@@ -24,10 +25,13 @@ const { createRequestLogger } = require('./request-log');
  *
  * @param {object} config - Full config (server.classPort, class.* settings).
  * @param {Database} ledger - SQLite instance (passed to plugin init).
+ * @param {object} [options] - Optional flags; { debug: boolean } enables deep debug tracing.
  * @returns {express.Application} Configured Express app.
  */
-function createClassApp(config, ledger) {
+function createClassApp(config, ledger, options = {}) {
   const app = express();
+  const debug = Boolean(options && options.debug);
+  const log = createLogger('OllaClass', { debug });
   // One-line-per-request logging across all OllaClass routes (incl. /health, /v1/systemone)
   app.use(createRequestLogger('OllaClass'));
   app.use(express.json({ limit: '50mb' }));
@@ -58,8 +62,18 @@ function createClassApp(config, ledger) {
         return res.status(501).json({ error: 'Classifier not yet implemented (ticket #06)' });
       }
 
+      // Deep debug: trace the classification request received from OllaSurf,
+      // the Jev-wrapped payload sent to tev1, tev1's reply, and the normalized
+      // reply sent back to OllaSurf.
+      if (debug) {
+        log.debug(`classification request: prompt=${prompt} action=${action || 'implement'}`);
+      }
+
       // Build Jev-style prompt-wrapping payload for tev1
       const payload = buildJevPayload(prompt, action);
+      if (debug) {
+        log.debug(`jev payload sent to tev1: ${JSON.stringify(payload)}`);
+      }
 
       // POST to tev1 endpoint
       const request = {
@@ -84,7 +98,15 @@ function createClassApp(config, ledger) {
       }
 
       if (response.status !== 200) {
+        if (debug) {
+          log.debug(`tev1 response rejected: status=${response.status} body=${JSON.stringify(response.body)}`);
+        }
         return res.status(response.status).json({ error: 'tev1 error', detail: response.body });
+      }
+
+      // Deep debug: trace tev1's raw reply.
+      if (debug) {
+        log.debug(`tev1 response: status=${response.status} body=${JSON.stringify(response.body)}`);
       }
 
       // Parse tev1 response into normalized output
@@ -104,7 +126,7 @@ function createClassApp(config, ledger) {
         lowConfidence = true;
       }
 
-      return res.json({
+      const reply = {
         category,
         confidence,
         is_clear: parsed.is_clear,
@@ -112,7 +134,14 @@ function createClassApp(config, ledger) {
         usage: parsed.usage,
         low_confidence: lowConfidence,
         raw: response.body,
-      });
+      };
+
+      // Deep debug: trace the reply sent back to OllaSurf.
+      if (debug) {
+        log.debug(`reply sent to ollasurf: category=${category} confidence=${confidence} low_confidence=${lowConfidence}`);
+      }
+
+      return res.json(reply);
 
     } catch (err) {
       console.error('OllaClass error:', err.message);

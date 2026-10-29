@@ -22,5 +22,6 @@
 * OpenCode integration config: opencode.jsonc, openchamber-providers.json, classifier-endpoint.json
 * README Observability section: how to capture console logs (`tee`), curl checks for `/health`, `/api/requests`, `/api/providers`, `/api/plugins`, and notes on what is not yet exposed (no `provider_state` API; `/dashboard` is a stub)
 * New per-request logging via `src/request-log.js` middleware on both OllaSurf and OllaClass apps: one line per request (`METHOD url -> STATUS (Xms)`), success via console.log, client errors via console.warn, server errors via console.error. Previously successful requests were silent. README updated to reflect that requests now produce console output.
+* Added `npm run start -- --debug` (CLI args via new `src/cli.js`: `--debug` / `--help`) to activate deep debug logging: OllaSurf traces incoming chat completion prompts, and OllaClass traces classification requests, Jev-wrapped tev1 payloads, tev1 replies, and normalized replies sent back to OllaSurf.
 
 ## Released

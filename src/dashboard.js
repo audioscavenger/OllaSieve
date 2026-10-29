@@ -10,8 +10,6 @@
 //
 // All data originates from the shared cap-ledger (SQLite) and PluginRegistry.
 
-const express = require('express');
-
 /**
  * Registers dashboard routes onto the OllaSurf Express app.
  *
@@ -28,7 +26,7 @@ function registerDashboard(app, config, ledger) {
   });
 
   app.get('/api/requests', (req, res) => {
-    const events = ledger.db ? ledger.db.prepare('SELECT * FROM usage_events ORDER BY ts DESC LIMIT 50').all() : [];
+    const events = ledger.getRequestLog();
     res.json({ events });
   });
 
@@ -44,7 +42,7 @@ function registerDashboard(app, config, ledger) {
     if (![7, 30, 90, 365].includes(daysInt)) {
       return res.status(400).json({ error: 'Invalid purge days. Use 7, 30, 90, or 365.' });
     }
-    const stmt = ledger.db ? ledger.db.prepare("DELETE FROM usage_events WHERE ts <= datetime('now', '-' || ? || ' days')") : null;
+    const stmt = ledger.db ? ledger.db.prepare('DELETE FROM usage_events WHERE ts <= datetime(\'now\', \'-\' || ? || \' days\')') : null;
     if (!stmt) return res.status(503).json({ error: 'Ledger unavailable' });
     const result = stmt.run(`${daysInt} days`);
     res.json({ deleted: result.changes, days: daysInt });

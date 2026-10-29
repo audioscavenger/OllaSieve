@@ -22,7 +22,15 @@
     "reactiveCooldownMs": 3000,
     "modelMatching": "family",
     "pollingIntervalMs": 300000,
-    "tiers": []
+    "tiers": [
+      {
+        "type": "free",
+        "priority": 1,
+        "providers": [
+          { "id": "ollama-local", "tier": "free", "type": "ollama", "base_url": "http://127.0.0.1:11434", "apiKeyEnv": null, "priority": 1 }
+        ]
+      }
+    ]
   },
   "class": {
     "enabled": true,

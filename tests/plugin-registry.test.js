@@ -15,14 +15,14 @@ describe('plugin-registry', () => {
     fs.mkdirSync(pluginDir, { recursive: true });
     fs.writeFileSync(
       path.join(pluginDir, 'index.js'),
-      `module.exports = { version: '1.2.3', async init(app, config, ledger) { app.locals.testplugin = true; } };`
+      'module.exports = { version: \'1.2.3\', async init(app, config, ledger) { app.locals.testplugin = true; } };'
     );
 
     // Temporarily override the plugins base path by monkeypatching
     const registry = new PluginRegistry();
     // We'll test with a config that references 'ollasurf' and 'ollaclass' which exist
     const config = { plugins: [{ name: 'ollasurf', enabled: true }, { name: 'ollaclass', enabled: true }] };
-    const mockAppFactory = (name) => ({ locals: {}, listen: () => {} });
+    const mockAppFactory = (_name) => ({ locals: {}, listen: () => {} });
     const mockLedger = {};
 
     await registry.load(config, mockAppFactory, mockLedger);

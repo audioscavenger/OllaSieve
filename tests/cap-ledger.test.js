@@ -18,11 +18,11 @@ describe('cap-ledger', () => {
     ledger = new CapLedger(db);
 
     // Insert base provider records (required for foreign keys)
-    const insertProvider = db.prepare(`INSERT INTO providers (id, tier, type, base_url) VALUES (?, 'free', 'openrouter', 'http://test')`);
+    const insertProvider = db.prepare('INSERT INTO providers (id, tier, type, base_url) VALUES (?, \'free\', \'openrouter\', \'http://test\')');
     ['p1','p2','p3','p4','p5'].forEach(id => insertProvider.run(id));
 
     // Insert caps for usage tracking
-    const insertCap = db.prepare(`INSERT INTO caps (provider_id, unit, limit_val, window) VALUES (?, ?, 1000, 'day')`);
+    const insertCap = db.prepare('INSERT INTO caps (provider_id, unit, limit_val, window) VALUES (?, ?, 1000, \'day\')');
     ['p1','p2','p3','p4','p5'].forEach(id => insertCap.run(id, 'tokens'));
   });
 

@@ -50,14 +50,14 @@ class CapLedgerRecords {
       if (usage) {
         const totalTokens = (usage.tokensIn ?? 0) + (usage.tokensOut ?? 0);
         // Increment token cap
-        this.db.prepare("UPDATE caps SET current_usage = current_usage + ?, updated_at = datetime('now') WHERE provider_id = ? AND unit = ?")
+        this.db.prepare('UPDATE caps SET current_usage = current_usage + ?, updated_at = datetime(\'now\') WHERE provider_id = ? AND unit = ?')
           .run(totalTokens, providerId, 'tokens');
         // Increment request cap
-        this.db.prepare("UPDATE caps SET current_usage = current_usage + 1, updated_at = datetime('now') WHERE provider_id = ? AND unit = ?")
+        this.db.prepare('UPDATE caps SET current_usage = current_usage + 1, updated_at = datetime(\'now\') WHERE provider_id = ? AND unit = ?')
           .run(providerId, 'requests');
         // Increment dollar cap (if provider reports cost)
         if (usage.costUsd !== null && usage.costUsd !== undefined) {
-          this.db.prepare("UPDATE caps SET current_usage = current_usage + ?, updated_at = datetime('now') WHERE provider_id = ? AND unit = ?")
+          this.db.prepare('UPDATE caps SET current_usage = current_usage + ?, updated_at = datetime(\'now\') WHERE provider_id = ? AND unit = ?')
             .run(usage.costUsd, providerId, 'dollars');
         }
       }
@@ -156,7 +156,7 @@ class CapLedgerRecords {
    * @returns {{changes: number}} Result with deleted row count.
    */
   purge(days) {
-    const stmt = this.db.prepare("DELETE FROM usage_events WHERE ts <= datetime('now', '-' || ? || ' days')");
+    const stmt = this.db.prepare('DELETE FROM usage_events WHERE ts <= datetime(\'now\', \'-\' || ? || \' days\')');
     return stmt.run(days);
   }
 }

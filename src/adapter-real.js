@@ -85,7 +85,7 @@ class RealAdapter extends ProviderAdapter {
    * @param {Headers} headers - Response headers.
    * @returns {{tokensIn: number, tokensOut: number, costUsd: number|null}|null}
    */
-  parseUsage(body, headers) {
+  parseUsage(body, _headers) {
     // OpenAI-compatible shape (preferred)
     if (body?.usage && typeof body.usage.prompt_tokens === 'number') {
       return {
