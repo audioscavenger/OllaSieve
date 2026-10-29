@@ -1,15 +1,17 @@
-// src/config.js - Configuration loading and validation for OllaSieve.
-//
-// Loads ollasieve.config.json from the working directory (or a path given
-// via OLLASIEVE_CONFIG env var), applies env-var overrides for secrets
-// (secrets are referenced by env var *name* in the config, never stored
-// in the file), and validates required fields.
-//
-// Dependency graph:
-//   index.js -> loadConfig()  -> deepMerge(DEFAULT_CONFIG, raw)
-//   index.js -> resolveEnv()  -> process.env lookup for API keys
-//   config.surf.tiers[].providers[].apiKeyEnv -> _resolvedApiKey
-//
+/*
+ * src/config.js - Configuration loading and validation for OllaSieve.
+ *
+ * Loads ollasieve.config.json from the working directory (or a path given
+ * via OLLASIEVE_CONFIG env var), applies env-var overrides for secrets
+ * (secrets are referenced by env var *name* in the config, never stored
+ * in the file), and validates required fields.
+ *
+ * Dependency graph:
+ *   index.js -> loadConfig()  -> deepMerge(DEFAULT_CONFIG, raw)
+ *   index.js -> resolveEnv()  -> process.env lookup for API keys
+ *   config.surf.tiers[].providers[].apiKeyEnv -> _resolvedApiKey
+ *
+ */
 
 const fs = require('fs');
 const path = require('path');

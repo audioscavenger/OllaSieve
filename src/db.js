@@ -1,20 +1,22 @@
-// src/db.js - SQLite setup for OllaSieve.
-//
-// Opens (or creates) the database at the configured path, enables WAL
-// mode for concurrent reads, and creates the schema tables if they
-// don't exist. Returns the better-sqlite3 database instance.
-//
-// Schema (5 tables):
-//   providers      — provider registry (id, tier, type, base_url, api_key_env, priority)
-//   caps           — per-provider limits (unit: tokens|requests|dollars, limit_val, window, current_usage)
-//   usage_events   — per-request log (tokens_in/out, cost_usd, status, latency_ms, switched_from)
-//   provider_state — state machine (healthy|exhausted|cooldown, cooldown_until, consecutive_failures)
-//   daily_summary  — aggregated daily totals (requests, tokens_in/out, cost_usd)
-//
-// Foreign keys: caps.provider_id -> providers.id, usage_events.provider_id -> providers.id,
-//               provider_state.provider_id -> providers.id, daily_summary.provider_id -> providers.id
-//
-// WAL mode + foreign_keys = ON enable safe concurrent reads + referential integrity.
+/*
+ * src/db.js - SQLite setup for OllaSieve.
+ *
+ * Opens (or creates) the database at the configured path, enables WAL
+ * mode for concurrent reads, and creates the schema tables if they
+ * don't exist. Returns the better-sqlite3 database instance.
+ *
+ * Schema (5 tables):
+ *   providers      — provider registry (id, tier, type, base_url, api_key_env, priority)
+ *   caps           — per-provider limits (unit: tokens|requests|dollars, limit_val, window, current_usage)
+ *   usage_events   — per-request log (tokens_in/out, cost_usd, status, latency_ms, switched_from)
+ *   provider_state — state machine (healthy|exhausted|cooldown, cooldown_until, consecutive_failures)
+ *   daily_summary  — aggregated daily totals (requests, tokens_in/out, cost_usd)
+ *
+ * Foreign keys: caps.provider_id -> providers.id, usage_events.provider_id -> providers.id,
+ *               provider_state.provider_id -> providers.id, daily_summary.provider_id -> providers.id
+ *
+ * WAL mode + foreign_keys = ON enable safe concurrent reads + referential integrity.
+ */
 
 const Database = require('better-sqlite3');
 const fs = require('fs');

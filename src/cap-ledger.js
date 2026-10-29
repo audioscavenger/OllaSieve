@@ -1,16 +1,18 @@
-// src/cap-ledger.js - CapLedger composite facade for usage tracking + provider state.
-//
-// Single entry point for ledger operations. Delegates to:
-//   - CapLedgerRecords   — usage recording, cap checking, daily summaries
-//   - CapLedgerState     — provider status (healthy/exhausted/cooldown), failure counting
-//
-// Usage flow:
-//   1. Provider responds → executeWithSwitching() → ledger.recordUsage()
-//   2. After response, ledger.checkCaps() triggers predictive exhaustion at 97%
-//   3. On 429 or 3 failures → ledger.setState('exhausted') or 'cooldown'
-//   4. Periodic cleanup → resetExpiredCaps() → restore healthy status
-//
-// Foreign keys to `providers` table enforced via SQLite FK constraints.
+/*
+ * src/cap-ledger.js - CapLedger composite facade for usage tracking + provider state.
+ *
+ * Single entry point for ledger operations. Delegates to:
+ *   - CapLedgerRecords   — usage recording, cap checking, daily summaries
+ *   - CapLedgerState     — provider status (healthy/exhausted/cooldown), failure counting
+ *
+ * Usage flow:
+ *   1. Provider responds → executeWithSwitching() → ledger.recordUsage()
+ *   2. After response, ledger.checkCaps() triggers predictive exhaustion at 97%
+ *   3. On 429 or 3 failures → ledger.setState('exhausted') or 'cooldown'
+ *   4. Periodic cleanup → resetExpiredCaps() → restore healthy status
+ *
+ * Foreign keys to `providers` table enforced via SQLite FK constraints.
+ */
 
 const { CapLedgerState } = require('./cap-ledger-state');
 const { CapLedgerRecords } = require('./cap-ledger-records');

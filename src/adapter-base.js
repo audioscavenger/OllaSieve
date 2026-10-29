@@ -1,19 +1,21 @@
-// src/adapter-base.js — Provider client adapter base class.
-//
-// Defines the minimal interface all adapters must implement:
-//   call(request) -> Promise<{ status, body, usage, latencyMs }>
-//
-// Where:
-//   - request: { method, url, headers, body }
-//   - status: HTTP status code
-//   - body: parsed response body (JSON or text)
-//   - usage: { tokensIn, tokensOut, costUsd } | null
-//   - latencyMs: round-trip time in milliseconds
-//
-// Subclasses: MockAdapter (tests), RealAdapter (production fetch).
-//
-// This interface is dependency-injected into createSurfApp / createClassApp
-// so the proxy and classifier work with any transport.
+/*
+ * src/adapter-base.js — Provider client adapter base class.
+ *
+ * Defines the minimal interface all adapters must implement:
+ *   call(request) -> Promise<{ status, body, usage, latencyMs }>
+ *
+ * Where:
+ *   - request: { method, url, headers, body }
+ *   - status: HTTP status code
+ *   - body: parsed response body (JSON or text)
+ *   - usage: { tokensIn, tokensOut, costUsd } | null
+ *   - latencyMs: round-trip time in milliseconds
+ *
+ * Subclasses: MockAdapter (tests), RealAdapter (production fetch).
+ *
+ * This interface is dependency-injected into createSurfApp / createClassApp
+ * so the proxy and classifier work with any transport.
+ */
 
 /**
  * Abstract base class for all provider adapters.

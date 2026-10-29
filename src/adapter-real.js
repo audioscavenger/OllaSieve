@@ -1,11 +1,13 @@
-// src/adapter-real.js — Real adapter (fetch-based) for upstream providers.
-//
-// Makes actual HTTP calls to OpenAI-compatible or Ollama endpoints.
-// Parses usage from response body (OpenAI shape or Ollama native shape).
-// Tracks per-adapter stats: calls, errors, total latency.
-//
-// Used by production OllaSurf / OllaClass via dependency injection.
-// Can be swapped with MockAdapter for tests.
+/*
+ * src/adapter-real.js — Real adapter (fetch-based) for upstream providers.
+ *
+ * Makes actual HTTP calls to OpenAI-compatible or Ollama endpoints.
+ * Parses usage from response body (OpenAI shape or Ollama native shape).
+ * Tracks per-adapter stats: calls, errors, total latency.
+ *
+ * Used by production OllaSurf / OllaClass via dependency injection.
+ * Can be swapped with MockAdapter for tests.
+ */
 
 const { ProviderAdapter } = require('./adapter-base');
 

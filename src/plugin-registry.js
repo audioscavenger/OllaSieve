@@ -1,15 +1,17 @@
-// src/plugin-registry.js - Plugin loading and lifecycle management.
-//
-// Each plugin exports { name, version, init(app, config, ledger, adapter) }.
-//
-// The registry loads plugins from the config's plugins array, calls init() on each
-// enabled plugin, and tracks their status (running/not-found/error/skipped).
-//
-// Plugins live under src/plugins/<name>/index.js:
-//   - ollasurf/ → routes attached to OllaSurf (proxy endpoints)
-//   - ollaclass/ → routes attached to OllaClass (classifier endpoint)
-//
-// Status is exposed via app.locals.registry (read by /api/plugins endpoint).
+/*
+ * src/plugin-registry.js - Plugin loading and lifecycle management.
+ *
+ * Each plugin exports { name, version, init(app, config, ledger, adapter) }.
+ *
+ * The registry loads plugins from the config's plugins array, calls init() on each
+ * enabled plugin, and tracks their status (running/not-found/error/skipped).
+ *
+ * Plugins live under src/plugins/<name>/index.js:
+ *   - ollasurf/ → routes attached to OllaSurf (proxy endpoints)
+ *   - ollaclass/ → routes attached to OllaClass (classifier endpoint)
+ *
+ * Status is exposed via app.locals.registry (read by /api/plugins endpoint).
+ */
 
 const fs = require('fs');
 const path = require('path');

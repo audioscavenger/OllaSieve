@@ -1,14 +1,16 @@
-// src/adapter-mock.js — Mock adapter for testing.
-//
-// Returns canned responses with configurable usage, status codes, delays.
-// Used by unit tests to simulate provider behavior without network calls.
-//
-// Behavior:
-//   - Each call() pops the next pre-configured response
-//   - After configured responses exhausted, returns a default 200 empty response
-//   - Tracks callCount for assertion in tests
-//
-// Does NOT enforce rate limits, caps, or retries — those are proxy-router's job.
+/*
+ * src/adapter-mock.js — Mock adapter for testing.
+ *
+ * Returns canned responses with configurable usage, status codes, delays.
+ * Used by unit tests to simulate provider behavior without network calls.
+ *
+ * Behavior:
+ *   - Each call() pops the next pre-configured response
+ *   - After configured responses exhausted, returns a default 200 empty response
+ *   - Tracks callCount for assertion in tests
+ *
+ * Does NOT enforce rate limits, caps, or retries — those are proxy-router's job.
+ */
 
 const { ProviderAdapter } = require('./adapter-base');
 

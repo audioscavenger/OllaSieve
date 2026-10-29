@@ -1,16 +1,18 @@
-// src/surf-server.js — OllaSurf Express app factory.
-//
-// Creates the Express application for OllaSurf on :11400.
-// Wires: health, proxy endpoints (/v1/chat/completions, /v1/models),
-// and dashboard routes (HTML + JSON API).
-//
-// Routing flow for POST /v1/chat/completions:
-//   1. Extract virtualModel from req.body.model
-//   2. If 'ollasurf/auto' -> classifyAndRoute (calls OllaClass via adapter)
-//   3. Else -> resolveTier() finds tier -> executeWithSwitching() loops providers
-//
-// Dependency injection: config (settings), db (SQLite ledger), adapter (provider client).
-// The adapter is optional for tests (MockAdapter) but required for real proxy flow.
+/*
+ * src/surf-server.js — OllaSurf Express app factory.
+ *
+ * Creates the Express application for OllaSurf on :11400.
+ * Wires: health, proxy endpoints (/v1/chat/completions, /v1/models),
+ * and dashboard routes (HTML + JSON API).
+ *
+ * Routing flow for POST /v1/chat/completions:
+ *   1. Extract virtualModel from req.body.model
+ *   2. If 'ollasurf/auto' -> classifyAndRoute (calls OllaClass via adapter)
+ *   3. Else -> resolveTier() finds tier -> executeWithSwitching() loops providers
+ *
+ * Dependency injection: config (settings), db (SQLite ledger), adapter (provider client).
+ * The adapter is optional for tests (MockAdapter) but required for real proxy flow.
+ */
 
 const express = require('express');
 const { resolveTier, executeWithSwitching } = require('./proxy-router');
@@ -32,9 +34,11 @@ function createSurfApp(config, ledger, adapter, options = {}) {
   const opts = options || {};
   const debug = Boolean(opts.debug);
   const log = createLogger('OllaSurf', { debug, sink: opts.sink, logPath: opts.logPath, maxBytes: opts.maxBytes });
-  // Switching policy consumed by proxy-router's executeWithSwitching.
-  // predictiveThreshold (default 0.97) drives predictive exhaustion checks;
-  // reactiveCooldownMs drives cooldown windows after failures.
+  /*
+   * Switching policy consumed by proxy-router's executeWithSwitching.
+   * predictiveThreshold (default 0.97) drives predictive exhaustion checks;
+   * reactiveCooldownMs drives cooldown windows after failures.
+   */
   const switchConfig = {
     predictiveThreshold: (config.surf && config.surf.switchThreshold) ?? 0.97,
     reactiveCooldownMs: (config.surf && config.surf.reactiveCooldownMs) ?? 3000,
@@ -62,10 +66,12 @@ function createSurfApp(config, ledger, adapter, options = {}) {
       const virtualModel = req.body?.model;
       if (!virtualModel) return res.status(400).json({ error: 'Missing model' });
 
-      // Deep debug: trace the incoming chat completion prompt that will flow
-      // into the plugin chain (OllaClass classifier / provider adapter).
-      // Debug lines are console-only deep traces; the JSONL decision trace
-      // carries metadata only (no prompt bodies).
+      /*
+       * Deep debug: trace the incoming chat completion prompt that will flow
+       * into the plugin chain (OllaClass classifier / provider adapter).
+       * Debug lines are console-only deep traces; the JSONL decision trace
+       * carries metadata only (no prompt bodies).
+       */
       if (debug) {
         log.debug('proxy_request', `chat completion received: model=${virtualModel} prompt=${extractPromptText(req.body)}`, { requestId: req.id, model: virtualModel });
       }

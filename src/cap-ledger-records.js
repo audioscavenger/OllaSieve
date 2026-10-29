@@ -1,20 +1,22 @@
-// src/cap-ledger-records.js - CapLedger usage recording, cap checking, and log queries.
-//
-// Handles the *data* side of the cap ledger:
-//   - recordUsage(): transactionally writes usage_events + updates caps + daily_summary
-//   - checkCaps(): evaluates predictive threshold (default 97%) across all cap units
-//   - getMostRestrictiveCap(): finds cap with highest % utilization
-//   - getProvidersWithCaps(): lists providers in a tier with their cap details
-//   - getRequestLog(): recent 50 requests (for dashboard)
-//   - purge(): deletes usage_events older than N days (dashboard /api/purge)
-//
-// Mixed-unit support:
-//   - tokens:  sum of prompt_tokens + completion_tokens
-//   - requests: +1 per call
-//   - dollars:  cost_usd from response (if provider reports it)
-//
-// "Most restrictive wins": when any cap unit exceeds its threshold,
-// the provider is considered exhausted. Proxy router uses this for switching.
+/*
+ * src/cap-ledger-records.js - CapLedger usage recording, cap checking, and log queries.
+ *
+ * Handles the *data* side of the cap ledger:
+ *   - recordUsage(): transactionally writes usage_events + updates caps + daily_summary
+ *   - checkCaps(): evaluates predictive threshold (default 97%) across all cap units
+ *   - getMostRestrictiveCap(): finds cap with highest % utilization
+ *   - getProvidersWithCaps(): lists providers in a tier with their cap details
+ *   - getRequestLog(): recent 50 requests (for dashboard)
+ *   - purge(): deletes usage_events older than N days (dashboard /api/purge)
+ *
+ * Mixed-unit support:
+ *   - tokens:  sum of prompt_tokens + completion_tokens
+ *   - requests: +1 per call
+ *   - dollars:  cost_usd from response (if provider reports it)
+ *
+ * "Most restrictive wins": when any cap unit exceeds its threshold,
+ * the provider is considered exhausted. Proxy router uses this for switching.
+ */
 
 class CapLedgerRecords {
   /**

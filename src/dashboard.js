@@ -1,14 +1,16 @@
-// src/dashboard.js — Dashboard routes and JSON APIs for OllaSurf (:11400).
-//
-// Mounts GET endpoints under /api/* serving:
-//   - /api/health            — service status
-//   - /api/providers         — per-tier provider list (used by dashboard progress bars)
-//   - /api/requests          — recent usage_events (last 50)
-//   - /api/plugins           — plugin registry status (running/skipped/error)
-//   - /api/purge?days=N      — delete usage_events older than N days
-//   - /dashboard             — HTML page that polls the JSON APIs (no SSR)
-//
-// All data originates from the shared cap-ledger (SQLite) and PluginRegistry.
+/*
+ * src/dashboard.js — Dashboard routes and JSON APIs for OllaSurf (:11400).
+ *
+ * Mounts GET endpoints under /api/* serving:
+ *   - /api/health            — service status
+ *   - /api/providers         — per-tier provider list (used by dashboard progress bars)
+ *   - /api/requests          — recent usage_events (last 50)
+ *   - /api/plugins           — plugin registry status (running/skipped/error)
+ *   - /api/purge?days=N      — delete usage_events older than N days
+ *   - /dashboard             — HTML page that polls the JSON APIs (no SSR)
+ *
+ * All data originates from the shared cap-ledger (SQLite) and PluginRegistry.
+ */
 
 /**
  * Registers dashboard routes onto the OllaSurf Express app.

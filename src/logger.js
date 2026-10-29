@@ -1,23 +1,25 @@
-// src/logger.js - Structured console + JSONL decision-trace logger for OllaSieve.
-//
-// Emits timestamped events through an injectable sink. The default sink appends
-// one JSON object per line (JSONL) to <dataDir>/ollasieve.log.jsonl via
-// appendFileSync, prints the event to the console, and rotates at 10 MB while
-// keeping the 5 most recent files; it degrades to console-only output if the file
-// write fails, so logging must never fail a request.
-//
-// Event types in circulation:
-//   - access: one line per HTTP request, emitted at debug level (via logger.debug),
-//     carrying requestId/method/url/status/latencyMs
-//   - provider_attempt: single provider attempt outcome (level info)
-//   - request_summary: terminal per-request event with requestId, model, tier,
-//     status, provider, switchedFrom, attempts, latencyMs (level info)
-//
-// Dependency graph:
-//   src/request-log.js -> createLogger() -> sink (default file, injectable)
-//   src/proxy-router.js -> executeWithSwitching() -> logger from deps
-//   src/surf-server.js -> createLogger() -> sink (from app options)
-//   src/class-server.js -> createLogger() -> sink (from app options)
+/*
+ * src/logger.js - Structured console + JSONL decision-trace logger for OllaSieve.
+ *
+ * Emits timestamped events through an injectable sink. The default sink appends
+ * one JSON object per line (JSONL) to <dataDir>/ollasieve.log.jsonl via
+ * appendFileSync, prints the event to the console, and rotates at 10 MB while
+ * keeping the 5 most recent files; it degrades to console-only output if the file
+ * write fails, so logging must never fail a request.
+ *
+ * Event types in circulation:
+ *   - access: one line per HTTP request, emitted at debug level (via logger.debug),
+ *     carrying requestId/method/url/status/latencyMs
+ *   - provider_attempt: single provider attempt outcome (level info)
+ *   - request_summary: terminal per-request event with requestId, model, tier,
+ *     status, provider, switchedFrom, attempts, latencyMs (level info)
+ *
+ * Dependency graph:
+ *   src/request-log.js -> createLogger() -> sink (default file, injectable)
+ *   src/proxy-router.js -> executeWithSwitching() -> logger from deps
+ *   src/surf-server.js -> createLogger() -> sink (from app options)
+ *   src/class-server.js -> createLogger() -> sink (from app options)
+ */
 
 const fs = require('fs');
 const path = require('path');

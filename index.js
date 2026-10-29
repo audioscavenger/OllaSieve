@@ -1,20 +1,22 @@
-// OllaSieve - Agent proxy with optional provider dashboard and classifier proxy.
-//
-// Entry point: loads config, opens SQLite, creates plugin registry,
-// starts OllaSurf (:11400) and OllaClass (:11401) servers.
-//
-// Architecture (single Node process, two optional Express servers):
-//   OpenCode / OpenChamber (client)
-//     -> OllaSurf :11400  (proxy + dashboard)
-//           -> resolveTier  -> proxy-router.js  (virtual model -> tier lookup)
-//           -> executeWithSwitching -> proxy-router.js (provider loop + switching)
-//                -> adapter (RealAdapter / MockAdapter)
-//     -> OllaClass :11401 (classifier)
-//           -> tev1 :11433  (Jev-style prompt wrapping + confidence gating)
-//   Shared: SQLite WAL ledger  (db.js schema / cap-ledger-{records,state}.js)
-//   Shared: provider adapter    (adapter.js: ProviderAdapter | MockAdapter | RealAdapter)
-//   Shared: plugin registry     (plugin-registry.js -> src/plugins/*/index.js)
-//
+/*
+ * OllaSieve - Agent proxy with optional provider dashboard and classifier proxy.
+ *
+ * Entry point: loads config, opens SQLite, creates plugin registry,
+ * starts OllaSurf (:11400) and OllaClass (:11401) servers.
+ *
+ * Architecture (single Node process, two optional Express servers):
+ *   OpenCode / OpenChamber (client)
+ *     -> OllaSurf :11400  (proxy + dashboard)
+ *           -> resolveTier  -> proxy-router.js  (virtual model -> tier lookup)
+ *           -> executeWithSwitching -> proxy-router.js (provider loop + switching)
+ *                -> adapter (RealAdapter / MockAdapter)
+ *     -> OllaClass :11401 (classifier)
+ *           -> tev1 :11433  (Jev-style prompt wrapping + confidence gating)
+ *   Shared: SQLite WAL ledger  (db.js schema / cap-ledger-{records,state}.js)
+ *   Shared: provider adapter    (adapter.js: ProviderAdapter | MockAdapter | RealAdapter)
+ *   Shared: plugin registry     (plugin-registry.js -> src/plugins/<name>/index.js)
+ *
+ */
 
 const { loadConfig } = require('./src/config');
 const { openDatabase } = require('./src/db');
@@ -58,10 +60,12 @@ async function main() {
   // state (provider exhausted/cooldown). Apps receive this, not the raw db.
   const ledger = new CapLedger(db);
 
-  // Inject provider adapter at startup (swappable for testing / MockAdapter).
-  // IMPORTANT: must be created before createSurfApp / createClassApp, which
-  // receive it as a dependency. Previously this was declared AFTER app
-  // creation, triggering a ReferenceError (temporal dead zone).
+  /*
+   * Inject provider adapter at startup (swappable for testing / MockAdapter).
+   * IMPORTANT: must be created before createSurfApp / createClassApp, which
+   * receive it as a dependency. Previously this was declared AFTER app
+   * creation, triggering a ReferenceError (temporal dead zone).
+   */
   const adapter = new RealAdapter();
 
   // Plugin registry — loads src/plugins/*/index.js and calls init()
@@ -80,11 +84,13 @@ async function main() {
     ? createClassApp(config, ledger, { debug, logPath })
     : null;
 
-  // Load plugins into their target apps.
-  // appFactory routes each plugin name to its Express app:
-  //   ollasurf  -> surfApp
-  //   ollaclass -> classApp
-  // Plugins skip gracefully if their app is null (disabled).
+  /*
+   * Load plugins into their target apps.
+   * appFactory routes each plugin name to its Express app:
+   *   ollasurf  -> surfApp
+   *   ollaclass -> classApp
+   * Plugins skip gracefully if their app is null (disabled).
+   */
   await registry.load(config, (name) => {
     if (name === 'ollasurf') return surfApp;
     if (name === 'ollaclass') return classApp;

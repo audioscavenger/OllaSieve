@@ -1,8 +1,10 @@
-// src/plugins/ollaclass/index.js - OllaClass plugin (stub for ticket #01).
-//
-// Full implementation in ticket #06 (classifier).
-//
-// Plugin interface: exports { name, version, init(app, config, ledger, adapter) }.
+/*
+ * src/plugins/ollaclass/index.js - OllaClass plugin (stub for ticket #01).
+ *
+ * Full implementation in ticket #06 (classifier).
+ *
+ * Plugin interface: exports { name, version, init(app, config, ledger, adapter) }.
+ */
 
 const name = 'ollaclass';
 const version = '0.1.0';

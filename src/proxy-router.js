@@ -1,17 +1,19 @@
-// src/proxy-router.js - OllaSurf proxy routing logic.
-//
-// Resolves virtual models to tiers, finds the first available provider
-// (with automated switching), and executes the proxy call via the adapter.
-//
-// Key functions:
-//   - resolveTier(model, config): map virtual model string -> tier object
-//   - findFirstAvailableProvider(tier, ledger, excludeProviderId): pick healthy provider
-//   - executeWithSwitching(tier, body, deps): loop providers with fallback logic
-//
-// Switching policy:
-//   - Predictive: after successful response, check caps at 97% threshold
-//   - Reactive:   on success, check caps; on 429/error, mark exhausted / cooldown
-//   - Tier fallback: iterate providers within a tier, skipping unhealthy ones
+/*
+ * src/proxy-router.js - OllaSurf proxy routing logic.
+ *
+ * Resolves virtual models to tiers, finds the first available provider
+ * (with automated switching), and executes the proxy call via the adapter.
+ *
+ * Key functions:
+ *   - resolveTier(model, config): map virtual model string -> tier object
+ *   - findFirstAvailableProvider(tier, ledger, excludeProviderId): pick healthy provider
+ *   - executeWithSwitching(tier, body, deps): loop providers with fallback logic
+ *
+ * Switching policy:
+ *   - Predictive: after successful response, check caps at 97% threshold
+ *   - Reactive:   on success, check caps; on 429/error, mark exhausted / cooldown
+ *   - Tier fallback: iterate providers within a tier, skipping unhealthy ones
+ */
 
 /**
  * Maps a virtual model name (e.g. 'ollasurf/trivial') to a tier config.

@@ -1,20 +1,22 @@
-// src/class-server.js — OllaClass Express app factory.
-//
-// Creates an Express application for the OllaClass classifier server.
-// Exposes:
-//   GET /health           — health endpoint
-//   POST /v1/systemone    — Jev-style classifier proxy to tev1 (port 11433)
-//
-// Flow:
-//   1. Receive { prompt, action } from OllaSurf (ollasurf/auto)
-//   2. Build Jev-style payload: { state: { prompt, action }, questions: { intent_category, is_clear } }
-//   3. POST to tev1Endpoint (default http://127.0.0.1:11433/v1/systemone)
-//   4. Parse tev1 response: category, confidence, is_clear, probabilities
-//   5. Apply confidence gating (threshold 0.6, is_clear 0.5): below -> fallbackCategory
-//   6. Return normalized JSON to OllaSurf for tier routing
-//
-// tev1 runs CPU-only on Ollama (:11433). First request may fail (session quirk)
-// — retry once before giving up with 503.
+/*
+ * src/class-server.js — OllaClass Express app factory.
+ *
+ * Creates an Express application for the OllaClass classifier server.
+ * Exposes:
+ *   GET /health           — health endpoint
+ *   POST /v1/systemone    — Jev-style classifier proxy to tev1 (port 11433)
+ *
+ * Flow:
+ *   1. Receive { prompt, action } from OllaSurf (ollasurf/auto)
+ *   2. Build Jev-style payload: { state: { prompt, action }, questions: { intent_category, is_clear } }
+ *   3. POST to tev1Endpoint (default http://127.0.0.1:11433/v1/systemone)
+ *   4. Parse tev1 response: category, confidence, is_clear, probabilities
+ *   5. Apply confidence gating (threshold 0.6, is_clear 0.5): below -> fallbackCategory
+ *   6. Return normalized JSON to OllaSurf for tier routing
+ *
+ * tev1 runs CPU-only on Ollama (:11433). First request may fail (session quirk)
+ * — retry once before giving up with 503.
+ */
 
 const express = require('express');
 const { createLogger } = require('./logger');
@@ -63,9 +65,11 @@ function createClassApp(config, ledger, options = {}) {
         return res.status(501).json({ error: 'Classifier not yet implemented (ticket #06)' });
       }
 
-      // Deep debug: trace the classification request received from OllaSurf,
-      // the Jev-wrapped payload sent to tev1, tev1's reply, and the normalized
-      // reply sent back to OllaSurf. Debug lines are console-only deep traces.
+      /*
+       * Deep debug: trace the classification request received from OllaSurf,
+       * the Jev-wrapped payload sent to tev1, tev1's reply, and the normalized
+       * reply sent back to OllaSurf. Debug lines are console-only deep traces.
+       */
       if (debug) {
         log.debug('classification_request', `classification request: prompt=${prompt} action=${action || 'implement'}`, { requestId: req.id, prompt, action: action || 'implement' });
       }

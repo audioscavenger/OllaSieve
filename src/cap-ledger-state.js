@@ -1,11 +1,13 @@
-// src/cap-ledger-state.js - CapLedger provider state transitions.
-//
-// Manages the provider state machine:
-//   healthy -> exhausted (predictive cap hit, at 97% threshold)
-//   healthy -> cooldown (after 3 consecutive failures, 60s cooldown)
-//   exhausted/cooldown -> healthy (via resetExpiredCaps / checkAndRecover)
-//
-// State persists in provider_state table (FK to providers.id).
+/*
+ * src/cap-ledger-state.js - CapLedger provider state transitions.
+ *
+ * Manages the provider state machine:
+ *   healthy -> exhausted (predictive cap hit, at 97% threshold)
+ *   healthy -> cooldown (after 3 consecutive failures, 60s cooldown)
+ *   exhausted/cooldown -> healthy (via resetExpiredCaps / checkAndRecover)
+ *
+ * State persists in provider_state table (FK to providers.id).
+ */
 
 class CapLedgerState {
   /**

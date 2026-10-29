@@ -30,5 +30,6 @@
 * Added startup config validation for ports, db path, and provider tiers (fails fast with actionable error), and updated the README Observability section for the JSONL decision trace, log capture, and debug access lines.
 * Updated `.eslintrc.json` with the compatible style options from the proposed prettier config (2-space indent, 80-char max line length, single quotes, semicolons); prettier itself was not adopted as the formatter.
 * Tightened the house comments rule in AGENTS.md: no more than 2 consecutive `//` comment lines; a third consecutive line requires a block comment.
+* Applied the house comments rule across the codebase: scanned all `src/`, `tests/`, `tools/`, and root JS files and converted every run of 3 or more consecutive `//` comment lines into a multi-line block comment; the scan now reports no remaining runs longer than 2 lines.
 
 ## Released

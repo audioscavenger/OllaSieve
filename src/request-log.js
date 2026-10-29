@@ -1,10 +1,12 @@
-// src/request-log.js - One-line-per-request HTTP access logging for OllaSieve servers.
-//
-// Emits one debug-level access event per HTTP request through the logger
-// (default JSONL sink + console when debug is enabled). Severity mapping:
-// 2xx/3xx -> debug level access event, 4xx -> warn, 5xx -> error. Mounted via
-// app.use() before all routes, so every route (health, proxy, models, dashboard,
-// api) is covered and always produces a visible access line while --debug is on.
+/*
+ * src/request-log.js - One-line-per-request HTTP access logging for OllaSieve servers.
+ *
+ * Emits one debug-level access event per HTTP request through the logger
+ * (default JSONL sink + console when debug is enabled). Severity mapping:
+ * 2xx/3xx -> debug level access event, 4xx -> warn, 5xx -> error. Mounted via
+ * app.use() before all routes, so every route (health, proxy, models, dashboard,
+ * api) is covered and always produces a visible access line while --debug is on.
+ */
 
 const { randomUUID } = require('crypto');
 const { createLogger } = require('./logger');
