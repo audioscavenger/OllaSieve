@@ -8,4 +8,4 @@ Event types: `provider_attempt` (outcome of a single provider attempt; level inf
 
 Rotation: files roll at 10 MB, keeping the 5 most recent.
 
-Consequences: the event log is only useful once the proxy wiring is corrected first — providers must be configured, the CapLedger must be wired in, `switchConfig` passed, `executeWithSwitching` must actually iterate attempts, and `/api/requests` must read the ledger. Until those fixes land, any events emitted would describe dead paths, so the wiring ticket ships before the logging ticket.
+Consequences: the event log is only useful once the proxy wiring is corrected first - providers must be configured, the CapLedger must be wired in, `switchConfig` passed, `executeWithSwitching` must actually iterate attempts, and `/api/requests` must read the ledger. Until those fixes land, any events emitted would describe dead paths, so the wiring ticket ships before the logging ticket.

@@ -1,5 +1,5 @@
 /*
- * src/adapter-real.js — Real adapter (fetch-based) for upstream providers.
+ * src/adapter-real.js - Real adapter (fetch-based) for upstream providers.
  *
  * Makes actual HTTP calls to OpenAI-compatible or Ollama endpoints.
  * Parses usage from response body (OpenAI shape or Ollama native shape).

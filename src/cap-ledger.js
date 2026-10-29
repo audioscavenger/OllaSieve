@@ -2,8 +2,8 @@
  * src/cap-ledger.js - CapLedger composite facade for usage tracking + provider state.
  *
  * Single entry point for ledger operations. Delegates to:
- *   - CapLedgerRecords   — usage recording, cap checking, daily summaries
- *   - CapLedgerState     — provider status (healthy/exhausted/cooldown), failure counting
+ *   - CapLedgerRecords   - usage recording, cap checking, daily summaries
+ *   - CapLedgerState     - provider status (healthy/exhausted/cooldown), failure counting
  *
  * Usage flow:
  *   1. Provider responds → executeWithSwitching() → ledger.recordUsage()

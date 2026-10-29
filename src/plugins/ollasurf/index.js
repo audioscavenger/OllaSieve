@@ -1,5 +1,5 @@
 /*
- * src/plugins/ollasurf/index.js — OllaSurf plugin (stub for ticket #01).
+ * src/plugins/ollasurf/index.js - OllaSurf plugin (stub for ticket #01).
  *
  * Full implementation in tickets #04 (core proxy), #05 (switching),
  * #07 (OllaClass integration), #08 (dashboard).

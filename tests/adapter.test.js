@@ -1,4 +1,4 @@
-// tests/adapter.test.js — Provider adapter tests.
+// tests/adapter.test.js - Provider adapter tests.
 const { test, describe, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 
